@@ -1,0 +1,9 @@
+[workspace] 
+members = [
+    "crates/tree-splicer",
+    "crates/tree-splicer-rust",
+]
+
+# https://nnethercote.github.io/perf-book/build-configuration.html
+[profile.release]
+lto = true

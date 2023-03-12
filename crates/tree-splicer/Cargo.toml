@@ -1,0 +1,35 @@
+[package]
+name = "tree-splicer"
+version = "0.0.0"
+description = "Simple grammar-based test case generator (black-box fuzzer)"
+keywords = ["black-box", "fuzzer", "grammar-based", "rust"]
+edition = "2021"
+authors = ["Langston Barrett <langston.barrett@gmail.com>"]
+license = "MIT"
+readme = "../../README.md"
+homepage = "https://github.com/langston-barrett/tree-splicer"
+repository = "https://github.com/langston-barrett/tree-splicer"
+
+[dependencies]
+anyhow = { version = "1", optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
+clap-verbosity-flag = { version = "2", optional = true }
+log = "0.4"
+nu-ansi-term = { version = "0.46", optional = true }
+num_cpus = { version = "1", optional = true }
+rand = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
+tree-sitter = "0.20"
+tree-sitter-edit = "0.1"
+
+[features]
+default = []
+cli = [
+  "dep:anyhow",
+  "dep:clap",
+  "dep:clap-verbosity-flag",
+  "dep:nu-ansi-term",
+  "dep:num_cpus",
+  "dep:tracing-subscriber",
+]
