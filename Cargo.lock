@@ -525,7 +525,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -542,7 +542,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer-rust"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "tree-sitter-rust",
