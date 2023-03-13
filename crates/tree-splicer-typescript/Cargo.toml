@@ -1,0 +1,16 @@
+[package]
+name = "tree-splicer-typescript"
+description = "Simple grammar-based TypeScript program generator"
+version = "0.1.0"
+keywords = ["black-box", "fuzzer", "grammar-based", "typescript"]
+edition = "2021"
+authors = ["Langston Barrett <langston.barrett@gmail.com>"]
+license = "MIT"
+readme = "../../README.md"
+homepage = "https://github.com/langston-barrett/tree-splicer"
+repository = "https://github.com/langston-barrett/tree-splicer"
+
+[dependencies]
+anyhow = "1"
+tree-splicer = { version = "0.1.0", path = "../tree-splicer", features = ["cli"] }
+tree-sitter-typescript = "0.20"

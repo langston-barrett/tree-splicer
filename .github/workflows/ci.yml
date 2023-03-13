@@ -37,6 +37,7 @@ jobs:
     - run: |
         cargo build \
           --bin ${NAME}-rust \
+          --bin ${NAME}-typescript \
           --locked \
           --release \
           --target=x86_64-unknown-linux-musl

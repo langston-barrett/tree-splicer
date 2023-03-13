@@ -524,6 +524,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-typescript"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "079c695c32d39ad089101c66393aeaca30e967fba3486a91f573d2f0e12d290a"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
 name = "tree-splicer"
 version = "0.1.0"
 dependencies = [
@@ -546,6 +556,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "tree-sitter-rust",
+ "tree-splicer",
+]
+
+[[package]]
+name = "tree-splicer-typescript"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tree-sitter-typescript",
  "tree-splicer",
 ]
 
