@@ -31,7 +31,7 @@ jobs:
           --locked \
           --release \
           --target=x86_64-unknown-linux-musl
-        cp target/x86_64-unknown-linux-musl/release/tree-splicer-{rust,typescript} .
+        cp target/x86_64-unknown-linux-musl/release/tree-splicer-{javascript,rust,typescript} .
 
     - uses: ncipollo/release-action@v1
       if: ${{ startsWith(github.ref, 'refs/tags/v') }}
