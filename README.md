@@ -97,6 +97,14 @@ example.
 - Rust
 - TypeScript
 
+## Bugs found
+
+### rustc
+
+[#109066](https://github.com/rust-lang/rust/issues/109066)
+[#109078](https://github.com/rust-lang/rust/issues/109078)
+[#109079](https://github.com/rust-lang/rust/issues/109079)
+
 ## Installation
 
 ### From a release
