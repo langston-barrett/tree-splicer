@@ -122,7 +122,8 @@ impl<'a> Iterator for Splicer<'a> {
         let tree_idx: usize = self.pick_usize(self.trees.len());
         let (text, tree) = *self.trees.get(tree_idx).unwrap();
         let mut edits = Edits::default();
-        for _ in 0..self.inter_splices {
+        let splices = self.rng.gen_range(0..self.inter_splices);
+        for _ in 0..splices {
             let mut node = self.pick_node(tree);
             let mut candidates = self.branches.0.get(node.kind()).unwrap().clone();
             // avoid not mutating
