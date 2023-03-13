@@ -103,8 +103,11 @@ example.
 ### rustc
 
 [#109066](https://github.com/rust-lang/rust/issues/109066)
+[#109071](https://github.com/rust-lang/rust/issues/109071)
+[#109072](https://github.com/rust-lang/rust/issues/109072)
 [#109078](https://github.com/rust-lang/rust/issues/109078)
 [#109079](https://github.com/rust-lang/rust/issues/109079)
+[#109090](https://github.com/rust-lang/rust/issues/109090)
 
 ## Installation
 
