@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 
-use rand::{prelude::ThreadRng, Rng};
+use rand::{prelude::StdRng, Rng, SeedableRng};
 use tree_sitter::{Node, Tree};
 
 use tree_sitter_edit::Editor;
@@ -65,7 +65,7 @@ impl<'a> Branches<'a> {
 pub struct Config {
     // pub intra_splices: usize,
     pub inter_splices: usize,
-    pub seed: usize,
+    pub seed: u64,
     pub tests: usize,
 }
 
@@ -75,7 +75,7 @@ struct Splicer<'a> {
     inter_splices: usize,
     trees: Vec<(&'a [u8], &'a Tree)>,
     remaining: usize,
-    rng: ThreadRng,
+    rng: StdRng,
 }
 
 impl<'a> Splicer<'a> {
@@ -173,12 +173,13 @@ pub fn splice<'a>(
     if possible < config.tests {
         eprintln!("[WARN] Only {possible} possible mutations");
     }
+    let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
     Splicer {
         branches,
         // intra_splices: config.intra_splices,
         inter_splices: config.inter_splices,
         remaining: std::cmp::min(config.tests, possible),
-        rng: rand::thread_rng(),
+        rng,
         trees,
     }
 }

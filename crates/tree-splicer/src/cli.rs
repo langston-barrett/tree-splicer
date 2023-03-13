@@ -79,7 +79,7 @@ pub struct Args {
 
     /// Seed
     #[arg(short, long, default_value_t = 0)]
-    pub seed: usize,
+    pub seed: u64,
 
     /// How many tests to make
     #[arg(long, default_value_t = 4)]
