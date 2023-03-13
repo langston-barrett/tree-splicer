@@ -90,6 +90,10 @@ fn x(x: usize) -> () {
 
 ## Supported languages
 
+Languages are easy to add, see
+[PR #3](https://github.com/langston-barrett/tree-splicer/pull/3) for an
+example.
+
 - Rust
 - TypeScript
 
