@@ -140,11 +140,11 @@ impl<'a> Iterator for Splicer<'a> {
                 let idx = self.rng.gen_range(0..candidates.len());
                 candidate = candidates.get(idx).unwrap();
             }
-            eprintln!(
-                "Replacing '{}' with '{}'",
-                std::str::from_utf8(&text[node.byte_range()]).unwrap(),
-                std::str::from_utf8(candidate).unwrap(),
-            );
+            // eprintln!(
+            //     "Replacing '{}' with '{}'",
+            //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
+            //     std::str::from_utf8(candidate).unwrap(),
+            // );
             edits.0.insert(node.id(), candidate);
         }
         let mut v = Vec::with_capacity(text.len() / 4); // low guesstimate
