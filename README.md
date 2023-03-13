@@ -10,6 +10,8 @@ maximal coverage and bug-finding through complete, hand-written grammars and
 complex techniques like coverage-based feedback, tree-splicer aims to achieve
 maximal ease-of-use by using off-the-shelf tree-sitter grammars and not
 requiring any instrumentation (nor even source code) for the target.
+In short, tree-splicer wants to be the [Radamsa][radamsa] of grammar-based
+fuzzing.
 
 tree-sitter grammars are resistant to syntax errors. Therefore, tree-splicer
 can even mutate syntactically-invalid inputs! You can also use tree-splicer
@@ -86,6 +88,11 @@ fn x(x: usize) -> () {
 }
 ```
 
+## Supported languages
+
+- Rust
+- TypeScript
+
 ## Installation
 
 ### From a release
@@ -125,5 +132,6 @@ You can find binaries in `target/release`. Run tests with `cargo test`.
 
 [cargo]: https://doc.rust-lang.org/cargo/
 [crates-io]: https://crates.io/
+[radamsa]: https://gitlab.com/akihe/radamsa
 [releases]: https://github.com/langston-barrett/tree-splicer/releases
 [rustup]: https://rustup.rs/
