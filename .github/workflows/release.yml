@@ -25,6 +25,7 @@ jobs:
     - name: Build static executables
       run: |
         cargo build \
+          --bin ${NAME}-javascript \
           --bin ${NAME}-rust \
           --bin ${NAME}-typescript \
           --locked \
@@ -35,7 +36,7 @@ jobs:
     - uses: ncipollo/release-action@v1
       if: ${{ startsWith(github.ref, 'refs/tags/v') }}
       with:
-        artifacts: "tree-splicer-rust,tree-splicer-typescript"
+        artifacts: "tree-splicer-javascript,tree-splicer-rust,tree-splicer-typescript"
         artifactErrorsFailBuild: true
         body: "See [CHANGELOG.md](https://github.com/langston-barrett/tree-splicer/blob/main/doc/CHANGELOG.md)."
         draft: true
