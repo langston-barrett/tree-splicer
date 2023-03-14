@@ -71,6 +71,8 @@ pub struct Config {
 
 struct Splicer<'a> {
     branches: Branches<'a>,
+    chaos: u8,
+    kinds: Vec<&'static str>,
     // intra_splices: usize,
     inter_splices: usize,
     trees: Vec<(&'a [u8], &'a Tree)>,
@@ -125,11 +127,27 @@ impl<'a> Iterator for Splicer<'a> {
         let splices = self.rng.gen_range(0..self.inter_splices);
         for _ in 0..splices {
             let mut node = self.pick_node(tree);
-            let mut candidates = self.branches.0.get(node.kind()).unwrap().clone();
+            let chaotic = self.rng.gen_range(0..100) < self.chaos;
+
+            let mut candidates = if chaotic {
+                let kind_idx = self.rng.gen_range(0..self.kinds.len());
+                let kind = self.kinds.get(kind_idx).unwrap();
+                self.branches.0.get(kind).unwrap().clone()
+            } else {
+                self.branches.0.get(node.kind()).unwrap().clone()
+            };
+
             // avoid not mutating
             while candidates.len() == 1 {
                 node = self.pick_node(tree);
-                candidates = self.branches.0.get(node.kind()).unwrap().clone();
+
+                candidates = if chaotic {
+                    let kind_idx = self.rng.gen_range(0..self.kinds.len());
+                    let kind = self.kinds.get(kind_idx).unwrap();
+                    self.branches.0.get(kind).unwrap().clone()
+                } else {
+                    self.branches.0.get(node.kind()).unwrap().clone()
+                };
             }
 
             let idx = self.rng.gen_range(0..candidates.len());
@@ -159,6 +177,7 @@ impl<'a> Iterator for Splicer<'a> {
 pub fn splice<'a>(
     config: Config,
     files: &'a HashMap<String, (Vec<u8>, Tree)>,
+    chaos: u8,
 ) -> impl Iterator<Item = Vec<u8>> + 'a {
     let trees: Vec<_> = files
         .iter()
@@ -175,8 +194,11 @@ pub fn splice<'a>(
         eprintln!("[WARN] Only {possible} possible mutations");
     }
     let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
+    let kinds = branches.0.keys().copied().collect();
     Splicer {
         branches,
+        chaos,
+        kinds,
         // intra_splices: config.intra_splices,
         inter_splices: config.inter_splices,
         remaining: std::cmp::min(config.tests, possible),

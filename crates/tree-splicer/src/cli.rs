@@ -61,6 +61,10 @@ fn handle_parse_errors(path: &str, tree: &Tree, on_parse_error: &OnParseError) {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    /// Percent of "chaotic" mutations - may introduce syntax errors
+    #[arg(short, long, default_value_t = 5)]
+    pub chaos: u8,
+
     /// Behavior on parse errors
     #[arg(long, default_value_t = OnParseError::Warn, value_name = "CHOICE")]
     on_parse_error: OnParseError,
@@ -163,7 +167,7 @@ pub fn main(language: tree_sitter::Language) -> Result<()> {
         tests: args.tests,
     };
     std::fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
-    for (i, out) in splice::splice(config, &files).enumerate() {
+    for (i, out) in splice::splice(config, &files, args.chaos).enumerate() {
         std::fs::write(args.output.join(i.to_string()), out)
             .context("Couldn't save generated test case")?;
     }
