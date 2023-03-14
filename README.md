@@ -112,7 +112,6 @@ example.
 [#109141](https://github.com/rust-lang/rust/issues/109141)
 [#109143](https://github.com/rust-lang/rust/issues/109143)
 [#109144](https://github.com/rust-lang/rust/issues/109144)
-[#109145](https://github.com/rust-lang/rust/issues/109145)
 [#109146](https://github.com/rust-lang/rust/issues/109146)
 [#109147](https://github.com/rust-lang/rust/issues/109147)
 [#109148](https://github.com/rust-lang/rust/issues/109148)
