@@ -108,6 +108,8 @@ example.
 [#109078](https://github.com/rust-lang/rust/issues/109078)
 [#109079](https://github.com/rust-lang/rust/issues/109079)
 [#109090](https://github.com/rust-lang/rust/issues/109090)
+[#109129](https://github.com/rust-lang/rust/issues/109129)
+[#109143](https://github.com/rust-lang/rust/issues/109143)
 
 ## Installation
 
