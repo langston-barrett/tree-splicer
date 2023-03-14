@@ -109,7 +109,13 @@ example.
 [#109079](https://github.com/rust-lang/rust/issues/109079)
 [#109090](https://github.com/rust-lang/rust/issues/109090)
 [#109129](https://github.com/rust-lang/rust/issues/109129)
+[#109141](https://github.com/rust-lang/rust/issues/109141)
 [#109143](https://github.com/rust-lang/rust/issues/109143)
+[#109144](https://github.com/rust-lang/rust/issues/109144)
+[#109145](https://github.com/rust-lang/rust/issues/109145)
+[#109146](https://github.com/rust-lang/rust/issues/109146)
+[#109147](https://github.com/rust-lang/rust/issues/109147)
+[#109148](https://github.com/rust-lang/rust/issues/109148)
 
 ## Installation
 
