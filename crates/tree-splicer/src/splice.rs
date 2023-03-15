@@ -94,6 +94,9 @@ impl<'a> Splicer<'a> {
         let root = tree.root_node();
         let mut cursor = tree.walk();
         let mut nodes: HashSet<_> = root.children(&mut cursor).collect();
+        if nodes.is_empty() {
+            return root;
+        }
         while !nodes.is_empty() {
             let mut next = HashSet::new();
             for node in nodes {
