@@ -116,6 +116,18 @@ example.
 [#109147](https://github.com/rust-lang/rust/issues/109147)
 [#109148](https://github.com/rust-lang/rust/issues/109148)
 
+<!-- NB: waiting on confirmation
+
+### boa
+
+[#2670](https://github.com/boa-dev/boa/issues/2670)
+[#2671](https://github.com/boa-dev/boa/issues/2671)
+[#2672](https://github.com/boa-dev/boa/issues/2672)
+[#2673](https://github.com/boa-dev/boa/issues/2673)
+[#2674](https://github.com/boa-dev/boa/issues/2674)
+
+-->
+
 ## Installation
 
 ### From a release
