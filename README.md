@@ -115,6 +115,24 @@ example.
 [#109146](https://github.com/rust-lang/rust/issues/109146)
 [#109147](https://github.com/rust-lang/rust/issues/109147)
 [#109148](https://github.com/rust-lang/rust/issues/109148)
+[#109152](https://github.com/rust-lang/rust/issues/109152)
+[#109178](https://github.com/rust-lang/rust/issues/109178)
+[#109188](https://github.com/rust-lang/rust/issues/109188)
+[#109191](https://github.com/rust-lang/rust/issues/109191)
+[#109204](https://github.com/rust-lang/rust/issues/109204)
+[#109232](https://github.com/rust-lang/rust/issues/109232)
+[#109239](https://github.com/rust-lang/rust/issues/109239)
+[#109296](https://github.com/rust-lang/rust/issues/109296)
+[#109297](https://github.com/rust-lang/rust/issues/109297)
+[#109298](https://github.com/rust-lang/rust/issues/109298)
+[#109299](https://github.com/rust-lang/rust/issues/109299)
+[#109300](https://github.com/rust-lang/rust/issues/109300)
+[#109304](https://github.com/rust-lang/rust/issues/109304)
+[#109305](https://github.com/rust-lang/rust/issues/109305)
+
+### rustfmt
+
+[#5716](https://github.com/rust-lang/rustfmt/issues/5716)
 
 <!-- NB: waiting on confirmation
 
