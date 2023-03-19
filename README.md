@@ -156,7 +156,7 @@ Statically-linked Linux binaries are available on the [releases page][releases].
 
 You can build a released version from [crates.io][crates-io]. You'll need the
 Rust compiler and the [Cargo][cargo] build tool. [rustup][rustup] makes it very
-easy to obtain these. Then, to install the reducer for the language `<LANG>`,
+easy to obtain these. Then, to install the generator for the language `<LANG>`,
 run:
 
 ```
