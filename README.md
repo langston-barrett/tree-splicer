@@ -1,17 +1,11 @@
 # tree-splicer
 
-tree-splicer is a simple grammar-based test case generator (black-box fuzzer).
-It uses tree-sitter grammars to parse a number of input files, and produces new
-files formed by splicing together parts of the input files.
+tree-splicer is a simple grammar-based test case generator. It parses a number
+of input files using [tree-sitter][tree-sitter] grammars, and produces new
+files formed by splicing together their ASTs.
 
-tree-splicer aims to occupy a different niche from more advanced grammar-based 
-fuzzers like Gramatron, Nautilus, and Grammarinator. Rather than achieve
-maximal coverage and bug-finding through complete, hand-written grammars and
-complex techniques like coverage-based feedback, tree-splicer aims to achieve
-maximal ease-of-use by using off-the-shelf tree-sitter grammars and not
-requiring any instrumentation (nor even source code) for the target.
-In short, tree-splicer wants to be the [Radamsa][radamsa] of grammar-based
-fuzzing.
+tree-splicer generates test cases in the [tree-crasher][tree-crasher] fuzzer
+and in [icemaker][icemaker], though it can also be used as a standalone tool.
 
 tree-sitter grammars are resistant to syntax errors. Therefore, tree-splicer
 can even mutate syntactically-invalid inputs! You can also use tree-splicer
@@ -185,6 +179,9 @@ You can find binaries in `target/release`. Run tests with `cargo test`.
 
 [cargo]: https://doc.rust-lang.org/cargo/
 [crates-io]: https://crates.io/
+[icemaker]: https://github.com/matthiaskrgr/icemaker
 [radamsa]: https://gitlab.com/akihe/radamsa
 [releases]: https://github.com/langston-barrett/tree-splicer/releases
 [rustup]: https://rustup.rs/
+[tree-crasher]: https://github.com/langston-barrett/tree-crasher
+[tree-sitter]: https://tree-sitter.github.io/tree-sitter/
