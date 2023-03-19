@@ -114,48 +114,53 @@ impl<'a> Splicer<'a> {
         *all_nodes.get(self.pick_idx(&all_nodes)).unwrap()
     }
 
-    fn splice_tree(&mut self, text: &[u8], tree: &'a Tree) -> Edits {
-        let mut edits = Edits::default();
-        let splices = self.rng.gen_range(0..self.inter_splices);
-        for _ in 0..splices {
-            let mut node = self.pick_node(tree);
-            let chaotic = self.rng.gen_range(0..100) < self.chaos;
+    fn splice_node(&mut self, text: &[u8], tree: &'a Tree) -> (usize, &'a [u8]) {
+        let mut node = self.pick_node(tree);
+        let chaotic = self.rng.gen_range(0..100) < self.chaos;
 
-            let mut candidates = if chaotic {
+        let mut candidates = if chaotic {
+            let kind_idx = self.rng.gen_range(0..self.kinds.len());
+            let kind = self.kinds.get(kind_idx).unwrap();
+            self.branches.0.get(kind).unwrap().clone()
+        } else {
+            self.branches.0.get(node.kind()).unwrap().clone()
+        };
+
+        // avoid not mutating
+        while candidates.len() == 1 {
+            node = self.pick_node(tree);
+
+            candidates = if chaotic {
                 let kind_idx = self.rng.gen_range(0..self.kinds.len());
                 let kind = self.kinds.get(kind_idx).unwrap();
                 self.branches.0.get(kind).unwrap().clone()
             } else {
                 self.branches.0.get(node.kind()).unwrap().clone()
             };
+        }
 
-            // avoid not mutating
-            while candidates.len() == 1 {
-                node = self.pick_node(tree);
-
-                candidates = if chaotic {
-                    let kind_idx = self.rng.gen_range(0..self.kinds.len());
-                    let kind = self.kinds.get(kind_idx).unwrap();
-                    self.branches.0.get(kind).unwrap().clone()
-                } else {
-                    self.branches.0.get(node.kind()).unwrap().clone()
-                };
-            }
-
+        let idx = self.rng.gen_range(0..candidates.len());
+        let mut candidate = candidates.get(idx).unwrap();
+        // Try to avoid not mutating
+        let node_text = &text[node.byte_range()];
+        while candidates.len() > 1 && candidate == &node_text {
             let idx = self.rng.gen_range(0..candidates.len());
-            let mut candidate = candidates.get(idx).unwrap();
-            // Try to avoid not mutating
-            let node_text = &text[node.byte_range()];
-            while candidates.len() > 1 && candidate == &node_text {
-                let idx = self.rng.gen_range(0..candidates.len());
-                candidate = candidates.get(idx).unwrap();
-            }
-            // eprintln!(
-            //     "Replacing '{}' with '{}'",
-            //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
-            //     std::str::from_utf8(candidate).unwrap(),
-            // );
-            edits.0.insert(node.id(), candidate);
+            candidate = candidates.get(idx).unwrap();
+        }
+        // eprintln!(
+        //     "Replacing '{}' with '{}'",
+        //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
+        //     std::str::from_utf8(candidate).unwrap(),
+        // );
+        (node.id(), candidate)
+    }
+
+    fn splice_tree(&mut self, text: &[u8], tree: &'a Tree) -> Edits {
+        let mut edits = Edits::default();
+        let splices = self.rng.gen_range(0..self.inter_splices);
+        for _ in 0..splices {
+            let (id, bytes) = self.splice_node(text, tree);
+            edits.0.insert(id, bytes);
         }
         edits
     }
