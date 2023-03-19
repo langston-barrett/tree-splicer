@@ -113,19 +113,8 @@ impl<'a> Splicer<'a> {
         }
         *all_nodes.get(self.pick_idx(&all_nodes)).unwrap()
     }
-}
 
-impl<'a> Iterator for Splicer<'a> {
-    type Item = Vec<u8>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.remaining == 0 {
-            return None;
-        }
-        self.remaining -= 1;
-
-        let tree_idx: usize = self.pick_usize(self.trees.len());
-        let (text, tree) = *self.trees.get(tree_idx).unwrap();
+    fn splice_tree(&mut self, text: &[u8], tree: &'a Tree) -> Edits {
         let mut edits = Edits::default();
         let splices = self.rng.gen_range(0..self.inter_splices);
         for _ in 0..splices {
@@ -168,6 +157,22 @@ impl<'a> Iterator for Splicer<'a> {
             // );
             edits.0.insert(node.id(), candidate);
         }
+        edits
+    }
+}
+
+impl<'a> Iterator for Splicer<'a> {
+    type Item = Vec<u8>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+        self.remaining -= 1;
+
+        let tree_idx: usize = self.pick_usize(self.trees.len());
+        let (text, tree) = *self.trees.get(tree_idx).unwrap();
+        let edits = self.splice_tree(text, tree);
         let mut v = Vec::with_capacity(text.len() / 4); // low guesstimate
         match tree_sitter_edit::render(&mut v, tree, text, &edits) {
             Err(_) => None,
