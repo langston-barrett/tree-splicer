@@ -6,6 +6,8 @@ use tree_sitter::{Language, Node, Tree};
 
 use tree_sitter_edit::{Editor, NodeId};
 
+use crate::node_types::NodeTypes;
+
 #[derive(Debug, Default)]
 pub struct Edits<'a>(HashMap<usize, &'a [u8]>);
 
@@ -71,9 +73,12 @@ fn parse(language: Language, code: &str) -> tree_sitter::Tree {
 
 #[derive(Debug)]
 pub struct Config {
+    pub chaos: u8,
+    pub deletions: u8,
     pub language: Language,
     // pub intra_splices: usize,
     pub inter_splices: usize,
+    pub node_types: NodeTypes,
     pub seed: u64,
     pub tests: usize,
 }
@@ -82,9 +87,11 @@ struct Splicer<'a> {
     language: Language,
     branches: Branches<'a>,
     chaos: u8,
+    deletions: u8,
     kinds: Vec<&'static str>,
     // intra_splices: usize,
     inter_splices: usize,
+    node_types: NodeTypes,
     trees: Vec<(&'a [u8], &'a Tree)>,
     remaining: usize,
     rng: StdRng,
@@ -99,19 +106,16 @@ impl<'a> Splicer<'a> {
         self.pick_usize(v.len())
     }
 
-    fn pick_node<'b>(&mut self, tree: &'b Tree) -> Node<'b> {
-        let mut all_nodes = Vec::with_capacity(16); // min
+    fn all_nodes<'b>(&self, tree: &'b Tree) -> Vec<Node<'b>> {
+        let mut all = Vec::with_capacity(16); // min
         let root = tree.root_node();
         let mut cursor = tree.walk();
         let mut nodes: HashSet<_> = root.children(&mut cursor).collect();
-        if nodes.is_empty() {
-            return root;
-        }
         while !nodes.is_empty() {
             let mut next = HashSet::new();
             for node in nodes {
                 debug_assert!(!next.contains(&node));
-                all_nodes.push(node);
+                all.push(node);
                 let mut child_cursor = tree.walk();
                 for child in node.children(&mut child_cursor) {
                     debug_assert!(child.id() != node.id());
@@ -121,7 +125,31 @@ impl<'a> Splicer<'a> {
             }
             nodes = next;
         }
-        *all_nodes.get(self.pick_idx(&all_nodes)).unwrap()
+        all
+    }
+
+    fn pick_node<'b>(&mut self, tree: &'b Tree) -> Node<'b> {
+        let nodes = self.all_nodes(tree);
+        if nodes.is_empty() {
+            return tree.root_node();
+        }
+        *nodes.get(self.pick_idx(&nodes)).unwrap()
+    }
+
+    fn delete_node(&mut self, _text: &[u8], tree: &Tree) -> (usize, Vec<u8>) {
+        let chaotic = self.rng.gen_range(0..100) < self.chaos;
+        if chaotic {
+            return (self.pick_node(tree).id(), Vec::new());
+        }
+        let nodes = self.all_nodes(tree);
+        if nodes.iter().all(|n| !self.node_types.optional_node(n)) {
+            return (self.pick_node(tree).id(), Vec::new());
+        }
+        let mut node = nodes.get(self.pick_idx(&nodes)).unwrap();
+        while !self.node_types.optional_node(node) {
+            node = nodes.get(self.pick_idx(&nodes)).unwrap();
+        }
+        (node.id(), Vec::new())
     }
 
     fn splice_node(&mut self, text: &[u8], tree: &Tree) -> (usize, Vec<u8>) {
@@ -163,7 +191,11 @@ impl<'a> Splicer<'a> {
         let splices = self.rng.gen_range(0..self.inter_splices);
         let mut text = Vec::from(text0);
         for _ in 0..splices {
-            let (id, bytes) = self.splice_node(text.as_slice(), &tree);
+            let (id, bytes) = if self.rng.gen_range(0..100) < self.deletions {
+                self.delete_node(text.as_slice(), &tree)
+            } else {
+                self.splice_node(text.as_slice(), &tree)
+            };
             let id = NodeId { id };
             let bytes = bytes.to_vec();
             let mut result = Vec::with_capacity(text.len() / 4); // low guesstimate
@@ -200,7 +232,6 @@ impl<'a> Iterator for Splicer<'a> {
 pub fn splice<'a>(
     config: Config,
     files: &'a HashMap<String, (Vec<u8>, Tree)>,
-    chaos: u8,
 ) -> impl Iterator<Item = Vec<u8>> + 'a {
     let trees: Vec<_> = files
         .iter()
@@ -219,12 +250,14 @@ pub fn splice<'a>(
     let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
     let kinds = branches.0.keys().copied().collect();
     Splicer {
+        chaos: config.chaos,
+        deletions: config.deletions,
         language: config.language,
         branches,
-        chaos,
         kinds,
         // intra_splices: config.intra_splices,
         inter_splices: config.inter_splices,
+        node_types: config.node_types,
         remaining: std::cmp::min(config.tests, possible),
         rng,
         trees,

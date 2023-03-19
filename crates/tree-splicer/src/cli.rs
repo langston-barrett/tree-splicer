@@ -65,6 +65,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = 5)]
     pub chaos: u8,
 
+    /// Percent of deletion mutations - the rest are splices
+    #[arg(short, long, default_value_t = 5)]
+    pub deletions: u8,
+
     /// Behavior on parse errors
     #[arg(long, default_value_t = OnParseError::Warn, value_name = "CHOICE")]
     on_parse_error: OnParseError,
@@ -138,7 +142,7 @@ fn init_tracing(args: &Args) {
     builder.event_format(formatter::TerseFormatter).init();
 }
 
-pub fn main(language: tree_sitter::Language) -> Result<()> {
+pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) -> Result<()> {
     let args = Args::parse();
 
     init_tracing(&args);
@@ -160,15 +164,19 @@ pub fn main(language: tree_sitter::Language) -> Result<()> {
         }
     }
 
+    let node_types = crate::node_types::NodeTypes::new(node_types_json_str)?;
     let config = Config {
+        chaos: args.chaos,
+        deletions: args.deletions,
         language,
         // intra_splices: 10,
         inter_splices: args.mutations,
+        node_types,
         seed: args.seed,
         tests: args.tests,
     };
     std::fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
-    for (i, out) in splice::splice(config, &files, args.chaos).enumerate() {
+    for (i, out) in splice::splice(config, &files).enumerate() {
         std::fs::write(args.output.join(i.to_string()), out)
             .context("Couldn't save generated test case")?;
     }
