@@ -161,6 +161,7 @@ pub fn main(language: tree_sitter::Language) -> Result<()> {
     }
 
     let config = Config {
+        language,
         // intra_splices: 10,
         inter_splices: args.mutations,
         seed: args.seed,

@@ -2,9 +2,9 @@
 use std::collections::{HashMap, HashSet};
 
 use rand::{prelude::StdRng, Rng, SeedableRng};
-use tree_sitter::{Node, Tree};
+use tree_sitter::{Language, Node, Tree};
 
-use tree_sitter_edit::Editor;
+use tree_sitter_edit::{Editor, NodeId};
 
 #[derive(Debug, Default)]
 pub struct Edits<'a>(HashMap<usize, &'a [u8]>);
@@ -61,8 +61,17 @@ impl<'a> Branches<'a> {
     }
 }
 
-#[derive(Debug, Default)]
+fn parse(language: Language, code: &str) -> tree_sitter::Tree {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(language)
+        .expect("Failed to set tree-sitter parser language");
+    parser.parse(code, None).expect("Failed to parse code")
+}
+
+#[derive(Debug)]
 pub struct Config {
+    pub language: Language,
     // pub intra_splices: usize,
     pub inter_splices: usize,
     pub seed: u64,
@@ -70,6 +79,7 @@ pub struct Config {
 }
 
 struct Splicer<'a> {
+    language: Language,
     branches: Branches<'a>,
     chaos: u8,
     kinds: Vec<&'static str>,
@@ -89,7 +99,7 @@ impl<'a> Splicer<'a> {
         self.pick_usize(v.len())
     }
 
-    fn pick_node(&mut self, tree: &'a Tree) -> Node<'a> {
+    fn pick_node<'b>(&mut self, tree: &'b Tree) -> Node<'b> {
         let mut all_nodes = Vec::with_capacity(16); // min
         let root = tree.root_node();
         let mut cursor = tree.walk();
@@ -114,22 +124,16 @@ impl<'a> Splicer<'a> {
         *all_nodes.get(self.pick_idx(&all_nodes)).unwrap()
     }
 
-    fn splice_node(&mut self, text: &[u8], tree: &'a Tree) -> (usize, &'a [u8]) {
-        let mut node = self.pick_node(tree);
+    fn splice_node(&mut self, text: &[u8], tree: &Tree) -> (usize, Vec<u8>) {
         let chaotic = self.rng.gen_range(0..100) < self.chaos;
 
-        let mut candidates = if chaotic {
-            let kind_idx = self.rng.gen_range(0..self.kinds.len());
-            let kind = self.kinds.get(kind_idx).unwrap();
-            self.branches.0.get(kind).unwrap().clone()
-        } else {
-            self.branches.0.get(node.kind()).unwrap().clone()
-        };
-
-        // avoid not mutating
-        while candidates.len() == 1 {
+        let mut node = tree.root_node();
+        let mut candidates = Vec::new();
+        // When modified trees are re-parsed, their nodes may have novel kinds
+        // not in Branches (candidates.len() == 0). Also, avoid not mutating
+        // (candidates.len() == 1).
+        while candidates.len() <= 1 {
             node = self.pick_node(tree);
-
             candidates = if chaotic {
                 let kind_idx = self.rng.gen_range(0..self.kinds.len());
                 let kind = self.kinds.get(kind_idx).unwrap();
@@ -152,17 +156,28 @@ impl<'a> Splicer<'a> {
         //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
         //     std::str::from_utf8(candidate).unwrap(),
         // );
-        (node.id(), candidate)
+        (node.id(), Vec::from(*candidate))
     }
 
-    fn splice_tree(&mut self, text: &[u8], tree: &'a Tree) -> Edits {
-        let mut edits = Edits::default();
+    fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
         let splices = self.rng.gen_range(0..self.inter_splices);
+        let mut text = Vec::from(text0);
         for _ in 0..splices {
-            let (id, bytes) = self.splice_node(text, tree);
-            edits.0.insert(id, bytes);
+            let (id, bytes) = self.splice_node(text.as_slice(), &tree);
+            let id = NodeId { id };
+            let bytes = bytes.to_vec();
+            let mut result = Vec::with_capacity(text.len() / 4); // low guesstimate
+            tree_sitter_edit::render(
+                &mut result,
+                &tree,
+                text.as_slice(),
+                &tree_sitter_edit::Replace { id, bytes },
+            )
+            .ok()?;
+            text = result.clone();
+            tree = parse(self.language, &String::from_utf8_lossy(text.as_slice()));
         }
-        edits
+        Some(text)
     }
 }
 
@@ -177,12 +192,7 @@ impl<'a> Iterator for Splicer<'a> {
 
         let tree_idx: usize = self.pick_usize(self.trees.len());
         let (text, tree) = *self.trees.get(tree_idx).unwrap();
-        let edits = self.splice_tree(text, tree);
-        let mut v = Vec::with_capacity(text.len() / 4); // low guesstimate
-        match tree_sitter_edit::render(&mut v, tree, text, &edits) {
-            Err(_) => None,
-            Ok(_) => Some(v),
-        }
+        self.splice_tree(text, tree.clone())
     }
 }
 
@@ -209,6 +219,7 @@ pub fn splice<'a>(
     let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
     let kinds = branches.0.keys().copied().collect();
     Splicer {
+        language: config.language,
         branches,
         chaos,
         kinds,
