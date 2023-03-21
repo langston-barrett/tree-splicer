@@ -94,6 +94,20 @@ example.
 
 ## Bugs found
 
+### boa
+
+[#2717](https://github.com/boa-dev/boa/issues/2717)
+[#2718](https://github.com/boa-dev/boa/issues/2718)
+[#2719](https://github.com/boa-dev/boa/issues/2719)
+
+<!-- Waiting on confirmation
+
+### deno
+
+[#18338](https://github.com/denoland/deno/issues/18338)
+
+-->
+
 ### rustc
 
 [#109066](https://github.com/rust-lang/rust/issues/109066)
@@ -127,12 +141,6 @@ example.
 ### rustfmt
 
 [#5716](https://github.com/rust-lang/rustfmt/issues/5716)
-
-### boa
-
-[#2717](https://github.com/boa-dev/boa/issues/2717)
-[#2718](https://github.com/boa-dev/boa/issues/2718)
-[#2719](https://github.com/boa-dev/boa/issues/2719)
 
 ## Installation
 
