@@ -128,17 +128,11 @@ example.
 
 [#5716](https://github.com/rust-lang/rustfmt/issues/5716)
 
-<!-- NB: waiting on confirmation
-
 ### boa
 
-[#2670](https://github.com/boa-dev/boa/issues/2670)
-[#2671](https://github.com/boa-dev/boa/issues/2671)
-[#2672](https://github.com/boa-dev/boa/issues/2672)
-[#2673](https://github.com/boa-dev/boa/issues/2673)
-[#2674](https://github.com/boa-dev/boa/issues/2674)
-
--->
+[#2717](https://github.com/boa-dev/boa/issues/2717)
+[#2718](https://github.com/boa-dev/boa/issues/2718)
+[#2719](https://github.com/boa-dev/boa/issues/2719)
 
 ## Installation
 
