@@ -167,7 +167,11 @@ impl<'a> Splicer<'a> {
                 let kind = self.kinds.get(kind_idx).unwrap();
                 self.branches.0.get(kind).unwrap().clone()
             } else {
-                self.branches.0.get(node.kind()).unwrap().clone()
+                self.branches
+                    .0
+                    .get(node.kind())
+                    .cloned()
+                    .unwrap_or_default()
             };
         }
 
