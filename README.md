@@ -100,13 +100,13 @@ example.
 [#2718](https://github.com/boa-dev/boa/issues/2718)
 [#2719](https://github.com/boa-dev/boa/issues/2719)
 
-<!-- Waiting on confirmation
+### clang
+
+[#61635](https://github.com/llvm/llvm-project/issues/61635)
 
 ### deno
 
 [#18338](https://github.com/denoland/deno/issues/18338)
-
--->
 
 ### rustc
 
