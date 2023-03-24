@@ -1,6 +1,6 @@
 [package]
 name = "tree-splicer"
-version = "0.3.0"
+version = "0.3.1"
 description = "Simple grammar-based test case generator (black-box fuzzer)"
 keywords = ["black-box", "fuzzer", "grammar-based", "rust"]
 edition = "2021"
