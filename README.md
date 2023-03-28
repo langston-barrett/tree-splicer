@@ -105,6 +105,8 @@ example.
 [#61635](https://github.com/llvm/llvm-project/issues/61635)
 [#61666](https://github.com/llvm/llvm-project/issues/61666)
 [#61667](https://github.com/llvm/llvm-project/issues/61667)
+[#61746](https://github.com/llvm/llvm-project/issues/61746)
+[#61747](https://github.com/llvm/llvm-project/issues/61747)
 
 ### deno
 
