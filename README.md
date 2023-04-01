@@ -146,20 +146,20 @@ example.
 
 [#5716](https://github.com/rust-lang/rustfmt/issues/5716)
 
-# Installation
+## Installation
 
-## Pre-compiled binaries
+### Pre-compiled binaries
 
 Pre-compiled binaries are available on the [releases page][releases].
 
-## Build from source
+### Build from source
 
 To install from source, you'll need to install Rust and [Cargo][cargo]. Follow
 the instructions on the [Rust installation page][install-rust].
 
 [install-rust]: https://www.rust-lang.org/tools/install
 
-### From a release on crates.io
+#### From a release on crates.io
 
 You can build a released version from [crates.io]. To install the latest
 release of tree-splicer for the language `<LANG>`, run:
@@ -171,7 +171,7 @@ cargo install tree-splicer-<LANG>
 This will automatically download the source from [crates.io], build it, and
 install it in Cargo's global binary directory (`~/.cargo/bin/` by default).
 
-### From the latest unreleased version on Github
+#### From the latest unreleased version on Github
 
 To build and install the very latest unreleased version, run:
 
@@ -179,7 +179,7 @@ To build and install the very latest unreleased version, run:
 cargo install --git https://github.com/langston-barrett/tree-splicer.git tree-splicer-LANG
 ```
 
-### Uninstalling
+#### Uninstalling
 
 To uninstall, run `cargo uninstall tree-splicer-<LANG>`.
 
