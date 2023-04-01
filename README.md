@@ -146,29 +146,48 @@ example.
 
 [#5716](https://github.com/rust-lang/rustfmt/issues/5716)
 
-## Installation
+# Installation
 
-### From a release
+## Pre-compiled binaries
 
-Statically-linked Linux binaries are available on the [releases page][releases].
+Pre-compiled binaries are available on the [releases page][releases].
 
-### From crates.io
+## Build from source
 
-You can build a released version from [crates.io][crates-io]. You'll need the
-Rust compiler and the [Cargo][cargo] build tool. [rustup][rustup] makes it very
-easy to obtain these. Then, to install the generator for the language `<LANG>`,
-run:
+To install from source, you'll need to install Rust and [Cargo][cargo]. Follow
+the instructions on the [Rust installation page][install-rust].
 
-```
+[install-rust]: https://www.rust-lang.org/tools/install
+
+### From a release on crates.io
+
+You can build a released version from [crates.io]. To install the latest
+release of tree-splicer for the language `<LANG>`, run:
+
+```sh
 cargo install tree-splicer-<LANG>
 ```
 
-This will install binaries in `~/.cargo/bin` by default.
+This will automatically download the source from [crates.io], build it, and
+install it in Cargo's global binary directory (`~/.cargo/bin/` by default).
+
+### From the latest unreleased version on Github
+
+To build and install the very latest unreleased version, run:
+
+```sh
+cargo install --git https://github.com/langston-barrett/tree-splicer.git tree-splicer-LANG
+```
+
+### Uninstalling
+
+To uninstall, run `cargo uninstall tree-splicer-<LANG>`.
 
 ## Build
 
-To build from source, you'll need the Rust compiler and the [Cargo][cargo] build
-tool. [rustup][rustup] makes it very easy to obtain these. Then, get the source:
+To build from source, you'll need to install Rust and [Cargo][cargo]. Follow
+the instructions on the [Rust installation page][install-rust]. Then, get
+the source:
 
 ```bash
 git clone https://github.com/langston-barrett/tree-splicer
@@ -184,10 +203,9 @@ cargo build --release
 You can find binaries in `target/release`. Run tests with `cargo test`.
 
 [cargo]: https://doc.rust-lang.org/cargo/
-[crates-io]: https://crates.io/
+[crates.io]: https://crates.io/
 [icemaker]: https://github.com/matthiaskrgr/icemaker
 [radamsa]: https://gitlab.com/akihe/radamsa
 [releases]: https://github.com/langston-barrett/tree-splicer/releases
-[rustup]: https://rustup.rs/
 [tree-crasher]: https://github.com/langston-barrett/tree-crasher
 [tree-sitter]: https://tree-sitter.github.io/tree-sitter/
