@@ -23,7 +23,7 @@ serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 tree-sitter = "0.20"
-tree-sitter-edit = "0.1"
+tree-sitter-edit = "0.3"
 
 [features]
 default = []
