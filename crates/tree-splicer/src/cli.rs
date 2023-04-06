@@ -77,6 +77,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = num_cpus::get())]
     pub jobs: usize,
 
+    /// Approximate maximum file size to produce (bytes); default = 1MiB
+    #[arg(long, default_value_t = 1048576)]
+    pub max_size: usize,
+
     /// Number of mutations per teset
     #[arg(short, long, default_value_t = 16)]
     pub mutations: usize,
@@ -84,6 +88,10 @@ pub struct Args {
     /// Directory to output to
     #[arg(short, long, default_value_os = "tree-splicer.out")]
     pub output: PathBuf,
+
+    /// Re-parse the file after this many mutations; higher is faster
+    #[arg(short, long, default_value_t = 1)]
+    pub reparse: usize,
 
     /// Seed
     #[arg(short, long, default_value_t = 0)]
@@ -171,7 +179,9 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         language,
         // intra_splices: 10,
         inter_splices: args.mutations,
+        max_size: args.max_size,
         node_types,
+        reparse: args.reparse,
         seed: args.seed,
         tests: args.tests,
     };
