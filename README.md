@@ -145,6 +145,14 @@ example.
 ### rustfmt
 
 [#5716](https://github.com/rust-lang/rustfmt/issues/5716)
+[#5738](https://github.com/rust-lang/rustfmt/issues/5738)
+[#5739](https://github.com/rust-lang/rustfmt/issues/5739)
+
+<!-- Probably:
+
+[#5735](https://github.com/rust-lang/rustfmt/issues/5735)
+
+-->
 
 ## Installation
 
