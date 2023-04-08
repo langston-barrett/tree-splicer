@@ -96,12 +96,11 @@ pub struct Config {
     /// When this is more than `inter_splices`, never re-parse.
     pub reparse: usize,
     pub seed: u64,
-    /// How many tests to generate
-    pub tests: usize,
 }
 
-struct Splicer<'a> {
-    language: Language,
+#[derive(Debug)]
+pub struct Splicer<'a> {
+    pub language: Language,
     branches: Branches<'a>,
     chaos: u8,
     deletions: u8,
@@ -111,7 +110,6 @@ struct Splicer<'a> {
     max_size: usize,
     node_types: NodeTypes,
     trees: Vec<(&'a [u8], &'a Tree)>,
-    remaining: usize,
     reparse: usize,
     rng: StdRng,
 }
@@ -121,6 +119,35 @@ impl<'a> Splicer<'a> {
         let range = node.byte_range();
         isize::try_from(replace.len()).unwrap_or_default()
             - isize::try_from(range.end - range.start).unwrap_or_default()
+    }
+
+    pub fn new(config: Config, files: &'a HashMap<String, (Vec<u8>, Tree)>) -> Self {
+        let trees: Vec<_> = files
+            .iter()
+            .map(|(_, (txt, tree))| (txt.as_ref(), tree))
+            .collect();
+        let branches = Branches::new(
+            files
+                .iter()
+                .map(|(_, (txt, tree))| (txt.as_ref(), tree))
+                .collect(),
+        );
+        let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
+        let kinds = branches.0.keys().copied().collect();
+        Splicer {
+            chaos: config.chaos,
+            deletions: config.deletions,
+            language: config.language,
+            branches,
+            kinds,
+            // intra_splices: config.intra_splices,
+            inter_splices: config.inter_splices,
+            max_size: config.max_size,
+            node_types: config.node_types,
+            reparse: config.reparse,
+            rng,
+            trees,
+        }
     }
 
     fn pick_usize(&mut self, n: usize) -> usize {
@@ -220,7 +247,8 @@ impl<'a> Splicer<'a> {
         (node.id(), replace, delta)
     }
 
-    fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
+    pub fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
+        // TODO: Assert that text0 and tree.root_node() are the same length?
         let mut edits = Edits::default();
         if self.inter_splices == 0 {
             return None;
@@ -256,11 +284,6 @@ impl<'a> Iterator for Splicer<'a> {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.remaining == 0 {
-            return None;
-        }
-        self.remaining -= 1;
-
         let mut tree_idx: usize = self.pick_usize(self.trees.len());
         let (mut text, mut tree) = *self.trees.get(tree_idx).unwrap();
         while text.len() > self.max_size {
@@ -268,43 +291,5 @@ impl<'a> Iterator for Splicer<'a> {
             (text, tree) = *self.trees.get(tree_idx).unwrap();
         }
         self.splice_tree(text, tree.clone())
-    }
-}
-
-#[allow(clippy::needless_lifetimes)]
-pub fn splice<'a>(
-    config: Config,
-    files: &'a HashMap<String, (Vec<u8>, Tree)>,
-) -> impl Iterator<Item = Vec<u8>> + 'a {
-    let trees: Vec<_> = files
-        .iter()
-        .map(|(_, (txt, tree))| (txt.as_ref(), tree))
-        .collect();
-    let branches = Branches::new(
-        files
-            .iter()
-            .map(|(_, (txt, tree))| (txt.as_ref(), tree))
-            .collect(),
-    );
-    let possible = branches.possible();
-    if possible < config.tests {
-        eprintln!("[WARN] Only {possible} possible mutations");
-    }
-    let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
-    let kinds = branches.0.keys().copied().collect();
-    Splicer {
-        chaos: config.chaos,
-        deletions: config.deletions,
-        language: config.language,
-        branches,
-        kinds,
-        // intra_splices: config.intra_splices,
-        inter_splices: config.inter_splices,
-        max_size: config.max_size,
-        node_types: config.node_types,
-        remaining: std::cmp::min(config.tests, possible),
-        reparse: config.reparse,
-        rng,
-        trees,
     }
 }

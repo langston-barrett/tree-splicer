@@ -12,8 +12,7 @@ use tracing::{error, warn};
 use tracing_subscriber::fmt::format::FmtSpan;
 use tree_sitter::Tree;
 
-use crate::splice;
-use crate::splice::Config;
+use crate::splice::{Config, Splicer};
 
 mod formatter;
 
@@ -183,10 +182,12 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         node_types,
         reparse: args.reparse,
         seed: args.seed,
-        tests: args.tests,
     };
     std::fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
-    for (i, out) in splice::splice(config, &files).enumerate() {
+    for (i, out) in Splicer::new(config, &files).enumerate() {
+        if i == args.tests {
+            break;
+        }
         std::fs::write(args.output.join(i.to_string()), out)
             .context("Couldn't save generated test case")?;
     }
