@@ -597,7 +597,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -616,7 +616,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer-javascript"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "tree-sitter-javascript",
@@ -625,7 +625,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer-rust"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "tree-sitter-rust",
@@ -634,7 +634,7 @@ dependencies = [
 
 [[package]]
 name = "tree-splicer-typescript"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "tree-sitter-typescript",

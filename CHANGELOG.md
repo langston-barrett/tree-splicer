@@ -2,6 +2,11 @@
 
 <!-- https://keepachangelog.com/en/1.0.0/ -->
 
+## [0.5.0] - 2023-07-17
+
+- Small changes to library API
+- Bump dependencies
+
 ## [0.4.0] - 2023-04-06
 
 - Add `--max-size`
