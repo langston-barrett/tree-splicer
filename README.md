@@ -141,6 +141,7 @@ example.
 [#109300](https://github.com/rust-lang/rust/issues/109300)
 [#109304](https://github.com/rust-lang/rust/issues/109304)
 [#109305](https://github.com/rust-lang/rust/issues/109305)
+[#123988](https://github.com/rust-lang/rust/issues/123988)
 
 ### rustfmt
 
