@@ -121,11 +121,23 @@ impl<'a> Splicer<'a> {
             - isize::try_from(range.end - range.start).unwrap_or_default()
     }
 
-    pub fn new(config: Config, files: &'a HashMap<String, (Vec<u8>, Tree)>) -> Self {
+    pub fn new(config: Config, files: &'a HashMap<String, (Vec<u8>, Tree)>) -> Option<Self> {
         let trees: Vec<_> = files
             .iter()
             .map(|(_, (txt, tree))| (txt.as_ref(), tree))
             .collect();
+
+        let mut all_empty = true;
+        for (_bytes, tree) in files.values() {
+            if tree.root_node().child_count() != 0 {
+                all_empty = false;
+                break;
+            }
+        }
+        if all_empty {
+            return None;
+        }
+
         let branches = Branches::new(
             files
                 .iter()
@@ -134,7 +146,7 @@ impl<'a> Splicer<'a> {
         );
         let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
         let kinds = branches.0.keys().copied().collect();
-        Splicer {
+        Some(Splicer {
             chaos: config.chaos,
             deletions: config.deletions,
             language: config.language,
@@ -147,7 +159,7 @@ impl<'a> Splicer<'a> {
             reparse: config.reparse,
             rng,
             trees,
-        }
+        })
     }
 
     fn pick_usize(&mut self, n: usize) -> usize {

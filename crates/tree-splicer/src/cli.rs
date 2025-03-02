@@ -184,12 +184,16 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         seed: args.seed,
     };
     std::fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
-    for (i, out) in Splicer::new(config, &files).enumerate() {
-        if i == args.tests {
-            break;
+    if let Some(splicer) = Splicer::new(config, &files) {
+        for (i, out) in splicer.enumerate() {
+            if i == args.tests {
+                break;
+            }
+            std::fs::write(args.output.join(i.to_string()), out)
+                .context("Couldn't save generated test case")?;
         }
-        std::fs::write(args.output.join(i.to_string()), out)
-            .context("Couldn't save generated test case")?;
+    } else {
+        eprintln!("[ERROR] All input files were empty!");
     }
 
     Ok(())
