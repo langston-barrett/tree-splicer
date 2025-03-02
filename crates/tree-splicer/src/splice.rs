@@ -13,7 +13,7 @@ struct Edits(HashMap<usize, Vec<u8>>);
 
 impl Editor for Edits {
     fn has_edit(&self, _tree: &Tree, node: &Node) -> bool {
-        self.0.get(&node.id()).is_some()
+        self.0.contains_key(&node.id())
     }
 
     fn edit(&self, _source: &[u8], tree: &Tree, node: &Node) -> Vec<u8> {
@@ -154,7 +154,7 @@ impl<'a> Splicer<'a> {
         self.rng.gen_range(0..n)
     }
 
-    fn pick_idx<T>(&mut self, v: &Vec<T>) -> usize {
+    fn pick_idx<T>(&mut self, v: &[T]) -> usize {
         self.pick_usize(v.len())
     }
 
@@ -185,7 +185,7 @@ impl<'a> Splicer<'a> {
         if nodes.is_empty() {
             return tree.root_node();
         }
-        *nodes.get(self.pick_idx(&nodes)).unwrap()
+        *nodes.get(self.pick_idx(nodes.as_slice())).unwrap()
     }
 
     fn delete_node(&mut self, _text: &[u8], tree: &Tree) -> (usize, Vec<u8>, isize) {
@@ -199,9 +199,9 @@ impl<'a> Splicer<'a> {
             let node = self.pick_node(tree);
             return (node.id(), Vec::new(), Self::delta(node, &[]));
         }
-        let mut node = nodes.get(self.pick_idx(&nodes)).unwrap();
+        let mut node = nodes.get(self.pick_idx(nodes.as_slice())).unwrap();
         while !self.node_types.optional_node(node) {
-            node = nodes.get(self.pick_idx(&nodes)).unwrap();
+            node = nodes.get(self.pick_idx(nodes.as_slice())).unwrap();
         }
         (node.id(), Vec::new(), Self::delta(*node, &[]))
     }
@@ -280,7 +280,7 @@ impl<'a> Splicer<'a> {
     }
 }
 
-impl<'a> Iterator for Splicer<'a> {
+impl Iterator for Splicer<'_> {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
