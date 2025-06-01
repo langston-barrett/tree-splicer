@@ -13,4 +13,4 @@ repository = "https://github.com/langston-barrett/tree-splicer"
 [dependencies]
 anyhow = "1"
 tree-splicer = { version = "0.6.0", path = "../tree-splicer", features = ["cli"] }
-tree-sitter-javascript = "0.20"
+tree-sitter-javascript = "0.21"
