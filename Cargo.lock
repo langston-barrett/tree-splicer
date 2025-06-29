@@ -552,10 +552,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4013970217383f67b18aef68f6fb2e8d409bc5755227092d32efb0422ba24b8"
 
 [[package]]
-name = "tree-sitter-rust"
-version = "0.24.0"
+name = "tree-sitter-rust-orchard"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b9b18034c684a2420722be8b2a91c9c44f2546b631c039edf575ccba8c61be1"
+checksum = "cef2589554b4561be7c2f9fa38b16ee2fe2b5131eec45f41a68ee075c79612b1"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -613,7 +613,7 @@ name = "tree-splicer-rust"
 version = "0.6.0"
 dependencies = [
  "anyhow",
- "tree-sitter-rust",
+ "tree-sitter-rust-orchard",
  "tree-splicer",
 ]
 
