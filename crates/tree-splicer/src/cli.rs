@@ -112,10 +112,10 @@ fn read_file(file: &str) -> Result<String> {
     fs::read_to_string(file).with_context(|| format!("Failed to read file {}", file))
 }
 
-fn parse(language: tree_sitter::Language, code: &str) -> Result<tree_sitter::Tree> {
+fn parse(language: &tree_sitter::Language, code: &str) -> Result<tree_sitter::Tree> {
     let mut parser = tree_sitter::Parser::new();
     parser
-        .set_language(language)
+        .set_language(language.into())
         .context("Failed to set tree-sitter parser language")?;
     parser.parse(code, None).context("Failed to parse code")
 }
@@ -159,13 +159,13 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         if f == "-" {
             let path = "<stdin>".to_string();
             let s = stdin_string()?;
-            let tree = parse(language, &s)?;
+            let tree = parse(&language, &s)?;
             handle_parse_errors(&path, &tree, &args.on_parse_error);
             files.insert(path, (s.into_bytes(), tree));
         } else {
             let path = f;
             let s = read_file(&path)?;
-            let tree = parse(language, &s)?;
+            let tree = parse(&language, &s)?;
             handle_parse_errors(&path, &tree, &args.on_parse_error);
             files.insert(path, (s.into_bytes(), tree));
         }
