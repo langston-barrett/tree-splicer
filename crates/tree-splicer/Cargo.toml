@@ -23,7 +23,7 @@ serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 tree-sitter = "0.25"
-tree-sitter-edit = { git = "https://github.com/wetneb/tree-sitter-edit.git", branch = "bump_tree_sitter_to_0.25" }
+tree-sitter-edit = "0.4"
 
 [features]
 default = []
