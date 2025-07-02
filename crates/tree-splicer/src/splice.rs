@@ -63,7 +63,7 @@ impl<'a> Branches<'a> {
     }
 }
 
-fn parse(language: Language, code: &str) -> tree_sitter::Tree {
+fn parse(language: &Language, code: &str) -> tree_sitter::Tree {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(language)
@@ -281,7 +281,7 @@ impl<'a> Splicer<'a> {
                 let mut result = Vec::with_capacity(usize::try_from(sz).unwrap_or_default());
                 tree_sitter_edit::render(&mut result, &tree, text.as_slice(), &edits).ok()?;
                 text = result.clone();
-                tree = parse(self.language, &String::from_utf8_lossy(text.as_slice()));
+                tree = parse(&self.language, &String::from_utf8_lossy(text.as_slice()));
                 edits = Edits::default();
             }
             if sized_out {
