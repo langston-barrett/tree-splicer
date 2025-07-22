@@ -163,7 +163,7 @@ impl<'a> Splicer<'a> {
     }
 
     fn pick_usize(&mut self, n: usize) -> usize {
-        self.rng.gen_range(0..n)
+        self.rng.random_range(0..n)
     }
 
     fn pick_idx<T>(&mut self, v: &[T]) -> usize {
@@ -201,7 +201,7 @@ impl<'a> Splicer<'a> {
     }
 
     fn delete_node(&mut self, _text: &[u8], tree: &Tree) -> (usize, Vec<u8>, isize) {
-        let chaotic = self.rng.gen_range(0..100) < self.chaos;
+        let chaotic = self.rng.random_range(0..100) < self.chaos;
         if chaotic {
             let node = self.pick_node(tree);
             return (node.id(), Vec::new(), Self::delta(node, &[]));
@@ -219,7 +219,7 @@ impl<'a> Splicer<'a> {
     }
 
     fn splice_node(&mut self, text: &[u8], tree: &Tree) -> (usize, Vec<u8>, isize) {
-        let chaotic = self.rng.gen_range(0..100) < self.chaos;
+        let chaotic = self.rng.random_range(0..100) < self.chaos;
 
         let mut node = tree.root_node();
         let mut candidates = Vec::new();
@@ -229,7 +229,7 @@ impl<'a> Splicer<'a> {
         while candidates.len() <= 1 {
             node = self.pick_node(tree);
             candidates = if chaotic {
-                let kind_idx = self.rng.gen_range(0..self.kinds.len());
+                let kind_idx = self.rng.random_range(0..self.kinds.len());
                 let kind = self.kinds.get(kind_idx).unwrap();
                 self.branches.0.get(kind).unwrap().clone()
             } else {
@@ -241,12 +241,12 @@ impl<'a> Splicer<'a> {
             };
         }
 
-        let idx = self.rng.gen_range(0..candidates.len());
+        let idx = self.rng.random_range(0..candidates.len());
         let mut candidate = candidates.get(idx).unwrap();
         // Try to avoid not mutating
         let node_text = &text[node.byte_range()];
         while candidates.len() > 1 && candidate == &node_text {
-            let idx = self.rng.gen_range(0..candidates.len());
+            let idx = self.rng.random_range(0..candidates.len());
             candidate = candidates.get(idx).unwrap();
         }
         // eprintln!(
@@ -265,11 +265,11 @@ impl<'a> Splicer<'a> {
         if self.inter_splices == 0 {
             return None;
         }
-        let splices = self.rng.gen_range(1..self.inter_splices);
+        let splices = self.rng.random_range(1..self.inter_splices);
         let mut text = Vec::from(text0);
         let mut sz = isize::try_from(text.len()).unwrap_or_default();
         for i in 0..splices {
-            let (id, bytes, delta) = if self.rng.gen_range(0..100) < self.deletions {
+            let (id, bytes, delta) = if self.rng.random_range(0..100) < self.deletions {
                 self.delete_node(text.as_slice(), &tree)
             } else {
                 self.splice_node(text.as_slice(), &tree)
