@@ -12,11 +12,11 @@ use crate::node_types::NodeTypes;
 struct Edits(HashMap<usize, Vec<u8>>);
 
 impl Editor for Edits {
-    fn has_edit(&self, _tree: &Tree, node: &Node) -> bool {
+    fn has_edit(&self, _tree: &Tree, node: &Node<'_>) -> bool {
         self.0.contains_key(&node.id())
     }
 
-    fn edit(&self, _source: &[u8], tree: &Tree, node: &Node) -> Vec<u8> {
+    fn edit(&self, _source: &[u8], tree: &Tree, node: &Node<'_>) -> Vec<u8> {
         debug_assert!(self.has_edit(tree, node));
         self.0.get(&node.id()).unwrap().clone()
     }
@@ -63,7 +63,7 @@ impl<'a> Branches<'a> {
     }
 }
 
-fn parse(language: &Language, code: &str) -> tree_sitter::Tree {
+fn parse(language: &Language, code: &str) -> Tree {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(language)
@@ -121,6 +121,7 @@ impl<'a> Splicer<'a> {
             - isize::try_from(range.end - range.start).unwrap_or_default()
     }
 
+    #[must_use]
     pub fn new(config: Config, files: &'a HashMap<String, (Vec<u8>, Tree)>) -> Option<Self> {
         let trees: Vec<_> = files
             .iter()
@@ -144,7 +145,7 @@ impl<'a> Splicer<'a> {
                 .map(|(_, (txt, tree))| (txt.as_ref(), tree))
                 .collect(),
         );
-        let rng = rand::rngs::StdRng::seed_from_u64(config.seed);
+        let rng = StdRng::seed_from_u64(config.seed);
         let kinds = branches.0.keys().copied().collect();
         Some(Splicer {
             chaos: config.chaos,
@@ -170,7 +171,7 @@ impl<'a> Splicer<'a> {
         self.pick_usize(v.len())
     }
 
-    fn all_nodes<'b>(&self, tree: &'b Tree) -> Vec<Node<'b>> {
+    fn all_nodes(tree: &Tree) -> Vec<Node<'_>> {
         let mut all = Vec::with_capacity(16); // min
         let root = tree.root_node();
         let mut cursor = tree.walk();
@@ -193,7 +194,7 @@ impl<'a> Splicer<'a> {
     }
 
     fn pick_node<'b>(&mut self, tree: &'b Tree) -> Node<'b> {
-        let nodes = self.all_nodes(tree);
+        let nodes = Self::all_nodes(tree);
         if nodes.is_empty() {
             return tree.root_node();
         }
@@ -206,7 +207,7 @@ impl<'a> Splicer<'a> {
             let node = self.pick_node(tree);
             return (node.id(), Vec::new(), Self::delta(node, &[]));
         }
-        let nodes = self.all_nodes(tree);
+        let nodes = Self::all_nodes(tree);
         if nodes.iter().all(|n| !self.node_types.optional_node(n)) {
             let node = self.pick_node(tree);
             return (node.id(), Vec::new(), Self::delta(node, &[]));

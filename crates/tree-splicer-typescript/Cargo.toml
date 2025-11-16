@@ -10,6 +10,9 @@ readme = "../../README.md"
 homepage = "https://github.com/langston-barrett/tree-splicer"
 repository = "https://github.com/langston-barrett/tree-splicer"
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = "1"
 tree-splicer = { version = "0.6.0", path = "../tree-splicer", features = ["cli"] }
