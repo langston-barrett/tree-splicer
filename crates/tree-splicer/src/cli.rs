@@ -24,7 +24,7 @@ pub enum OnParseError {
 }
 
 impl std::fmt::Display for OnParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OnParseError::Ignore => write!(f, "ignore"),
             OnParseError::Warn => write!(f, "warn"),
@@ -112,7 +112,7 @@ fn read_file(file: &str) -> Result<String> {
     fs::read_to_string(file).with_context(|| format!("Failed to read file {file}"))
 }
 
-fn parse(language: &tree_sitter::Language, code: &str) -> Result<tree_sitter::Tree> {
+fn parse(language: &tree_sitter::Language, code: &str) -> Result<Tree> {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(language)
@@ -128,7 +128,7 @@ fn stdin_string() -> Result<String> {
 }
 
 #[inline]
-fn log_tracing_level(level: &log::Level) -> tracing::Level {
+fn log_tracing_level(level: log::Level) -> tracing::Level {
     match level {
         log::Level::Trace => tracing::Level::TRACE,
         log::Level::Debug => tracing::Level::DEBUG,
@@ -144,7 +144,7 @@ fn init_tracing(args: &Args) {
         .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE)
         .with_target(false)
         .with_max_level(log_tracing_level(
-            &args.verbose.log_level().unwrap_or(log::Level::Info),
+            args.verbose.log_level().unwrap_or(log::Level::Info),
         ));
     builder.event_format(formatter::TerseFormatter).init();
 }
@@ -183,13 +183,13 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         reparse: args.reparse,
         seed: args.seed,
     };
-    std::fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
+    fs::create_dir_all(&args.output).context("Couldn't create output directory")?;
     if let Some(splicer) = Splicer::new(config, &files) {
         for (i, out) in splicer.enumerate() {
             if i == args.tests {
                 break;
             }
-            std::fs::write(args.output.join(i.to_string()), out)
+            fs::write(args.output.join(i.to_string()), out)
                 .context("Couldn't save generated test case")?;
         }
     } else {

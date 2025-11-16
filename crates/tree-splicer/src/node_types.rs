@@ -82,7 +82,7 @@ impl NodeTypes {
         // For each type of node...
         for node in &nodes {
             // Loop through it's fields...
-            for (_field_name, field) in node.fields.iter() {
+            for field in node.fields.values() {
                 // And save the name of all types that the field could be.
                 for subtype in &field.types {
                     for subsubty in subtypes.get(&subtype.ty).unwrap_or(&Vec::new()) {
@@ -129,7 +129,8 @@ impl NodeTypes {
     }
 
     /// Defaults to `true` if the real answer can't be determined.
-    pub fn optional_node(&self, node: &tree_sitter::Node) -> bool {
+    #[must_use]
+    pub fn optional_node(&self, node: &tree_sitter::Node<'_>) -> bool {
         if let Some(p) = node.parent() {
             self.optional(node.kind(), p.kind())
         } else {
@@ -138,7 +139,8 @@ impl NodeTypes {
     }
 
     // TODO(#21): Also include fields, include multiple and not required
-    pub fn list_types(&self, node: &tree_sitter::Node) -> Vec<String> {
+    #[must_use]
+    pub fn list_types(&self, node: &tree_sitter::Node<'_>) -> Vec<String> {
         let mut kinds = Vec::new();
         if let Some(children) = self.children.get(node.kind()) {
             if children.multiple && !children.required {
@@ -150,6 +152,9 @@ impl NodeTypes {
         kinds
     }
 
+    /// # Panics
+    /// When kind can't be found
+    #[must_use]
     pub fn subtypes(&self, kind: &String) -> &[String] {
         self.subtypes.get(kind).expect("Invalid node kind")
     }
