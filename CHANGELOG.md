@@ -2,6 +2,10 @@
 
 <!-- https://keepachangelog.com/en/1.0.0/ -->
 
+## [0.7.0] - 2025-11-26
+
+- Bump dependencies, including `tree-sitter`
+
 ## [0.6.0] - 2025-03-12
 
 - Fix a bug where the splicer looped infinitely on empty inputs
