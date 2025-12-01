@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: langston-barrett/gha/.github/workflows/rust-ci.yml@a523f20f42319e0158fe00ab4772a822d50ad248
+    uses: langston-barrett/gha/.github/workflows/rust-ci.yml@ddb47fff1a948a8b474f5e709eb8f5c3ec90ca3c
     with:
       bench: false
       os: ubuntu-24.04
