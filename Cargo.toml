@@ -12,6 +12,7 @@ lto = true
 
 # My preferred lint configuration
 [workspace.lints.clippy]
+# pedantic = { level = "warn", priority = -1 }
 case_sensitive_file_extension_comparisons = "allow"
 dbg_macro = "warn"
 explicit_iter_loop = "warn"
@@ -35,6 +36,7 @@ unimplemented = "warn"
 uninlined_format_args = "warn"
 unreadable_literal = "warn"
 use_debug = "warn"
+
 [workspace.lints.rust]
 absolute_paths_not_starting_with_crate = "warn"
 dead_code = "warn"
