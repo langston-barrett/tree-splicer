@@ -15,5 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow = "1"
-tree-splicer = { version = "0.7.0", path = "../tree-splicer", features = ["cli"] }
+tree-splicer = { version = "0.7.0", path = "../tree-splicer", features = [
+  "cli",
+] }
 tree-sitter-rust = "0.24"
