@@ -1,9 +1,9 @@
-[workspace] 
+[workspace]
 members = [
-    "crates/tree-splicer",
-    "crates/tree-splicer-javascript",
-    "crates/tree-splicer-rust",
-    "crates/tree-splicer-typescript",
+  "crates/tree-splicer",
+  "crates/tree-splicer-javascript",
+  "crates/tree-splicer-rust",
+  "crates/tree-splicer-typescript",
 ]
 
 # https://nnethercote.github.io/perf-book/build-configuration.html
