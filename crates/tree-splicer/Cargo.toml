@@ -25,7 +25,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
-tree-sitter = "0.25"
+tree-sitter = "0.26"
 tree-sitter-edit = "0.4"
 
 [features]
