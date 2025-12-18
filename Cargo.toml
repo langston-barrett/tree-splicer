@@ -5,6 +5,7 @@ members = [
   "crates/tree-splicer-rust",
   "crates/tree-splicer-typescript",
 ]
+resolver = "2"
 
 # https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.release]
