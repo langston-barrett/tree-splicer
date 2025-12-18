@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 
-use rand::{prelude::StdRng, Rng, SeedableRng};
+use rand::{prelude::StdRng, seq::IndexedRandom, Rng, SeedableRng};
 use tree_sitter::{Language, Node, Tree};
 
 use tree_sitter_edit::Editor;
@@ -26,25 +26,15 @@ impl Editor for Edits {
 struct Branches<'a>(HashMap<&'static str, Vec<&'a [u8]>>);
 
 impl<'a> Branches<'a> {
-    fn new(trees: Vec<(&'a [u8], &'a Tree)>) -> Self {
+    fn new(trees: &[(&'a [u8], &'a Tree)]) -> Self {
         let mut branches = HashMap::with_capacity(trees.len()); // min
-        for (text, tree) in trees {
-            let mut nodes = vec![tree.root_node()];
-            while !nodes.is_empty() {
-                let mut children = Vec::with_capacity(nodes.len()); // guesstimate
-                for node in nodes {
-                    branches
-                        .entry(node.kind())
-                        .or_insert_with(|| HashSet::with_capacity(1))
-                        .insert(&text[node.byte_range()]);
-                    let mut i = 0;
-                    while let Some(child) = node.child(i) {
-                        children.push(child);
-                        i += 1;
-                    }
-                }
-                nodes = children;
-            }
+        for &(text, tree) in trees {
+            traverse(tree, |node| {
+                branches
+                    .entry(node.kind())
+                    .or_insert_with(|| HashSet::with_capacity(1))
+                    .insert(&text[node.byte_range()]);
+            });
         }
         Branches(
             branches
@@ -63,7 +53,7 @@ impl<'a> Branches<'a> {
     }
 }
 
-fn parse(language: &Language, code: &str) -> Tree {
+fn parse(language: &Language, code: &[u8]) -> Tree {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(language)
@@ -115,36 +105,28 @@ pub struct Splicer<'a> {
 }
 
 impl<'a> Splicer<'a> {
-    fn delta(node: Node<'_>, replace: &[u8]) -> isize {
-        let range = node.byte_range();
+    fn delta(node: &Node<'_>, replace: &[u8]) -> isize {
         isize::try_from(replace.len()).unwrap_or_default()
-            - isize::try_from(range.end - range.start).unwrap_or_default()
+            - isize::try_from(node.byte_range().len()).unwrap_or_default()
     }
 
     #[must_use]
     pub fn new(config: Config, files: &'a HashMap<String, (Vec<u8>, Tree)>) -> Option<Self> {
+        let mut all_empty = true;
         let trees: Vec<_> = files
             .iter()
-            .map(|(_, (txt, tree))| (txt.as_ref(), tree))
+            .map(|(_, (txt, tree))| {
+                if tree.root_node().child_count() != 0 {
+                    all_empty = false;
+                }
+                (txt.as_ref(), tree)
+            })
             .collect();
-
-        let mut all_empty = true;
-        for (_bytes, tree) in files.values() {
-            if tree.root_node().child_count() != 0 {
-                all_empty = false;
-                break;
-            }
-        }
         if all_empty {
             return None;
         }
 
-        let branches = Branches::new(
-            files
-                .iter()
-                .map(|(_, (txt, tree))| (txt.as_ref(), tree))
-                .collect(),
-        );
+        let branches = Branches::new(&trees);
         let rng = StdRng::seed_from_u64(config.seed);
         let kinds = branches.0.keys().copied().collect();
         Some(Splicer {
@@ -163,127 +145,98 @@ impl<'a> Splicer<'a> {
         })
     }
 
-    fn pick_usize(&mut self, n: usize) -> usize {
-        self.rng.random_range(0..n)
-    }
-
-    fn pick_idx<T>(&mut self, v: &[T]) -> usize {
-        self.pick_usize(v.len())
-    }
-
     fn all_nodes(tree: &Tree) -> Vec<Node<'_>> {
         let mut all = Vec::with_capacity(16); // min
-        let root = tree.root_node();
-        let mut cursor = tree.walk();
-        let mut nodes: HashSet<_> = root.children(&mut cursor).collect();
-        while !nodes.is_empty() {
-            let mut next = HashSet::new();
-            for node in nodes {
-                debug_assert!(!next.contains(&node));
-                all.push(node);
-                let mut child_cursor = tree.walk();
-                for child in node.children(&mut child_cursor) {
-                    debug_assert!(child.id() != node.id());
-                    debug_assert!(!next.contains(&child));
-                    next.insert(child);
-                }
-            }
-            nodes = next;
-        }
+        traverse(tree, |node| all.push(node));
         all
     }
 
-    fn pick_node<'b>(&mut self, tree: &'b Tree) -> Node<'b> {
-        let nodes = Self::all_nodes(tree);
-        if nodes.is_empty() {
-            return tree.root_node();
-        }
-        *nodes.get(self.pick_idx(nodes.as_slice())).unwrap()
-    }
+    fn delete_node(&mut self, _text: &[u8], nodes: &[Node<'_>]) -> (usize, Vec<u8>, isize) {
+        let delete_ret = |node: &Node<'_>| (node.id(), Vec::new(), Self::delta(node, &[]));
 
-    fn delete_node(&mut self, _text: &[u8], tree: &Tree) -> (usize, Vec<u8>, isize) {
         let chaotic = self.rng.random_range(0..100) < self.chaos;
-        if chaotic {
-            let node = self.pick_node(tree);
-            return (node.id(), Vec::new(), Self::delta(node, &[]));
+
+        let mut node = nodes.choose(&mut self.rng).unwrap();
+        if chaotic || nodes.iter().all(|n| !self.node_types.optional_node(n)) {
+            return delete_ret(node);
         }
-        let nodes = Self::all_nodes(tree);
-        if nodes.iter().all(|n| !self.node_types.optional_node(n)) {
-            let node = self.pick_node(tree);
-            return (node.id(), Vec::new(), Self::delta(node, &[]));
-        }
-        let mut node = nodes.get(self.pick_idx(nodes.as_slice())).unwrap();
         while !self.node_types.optional_node(node) {
-            node = nodes.get(self.pick_idx(nodes.as_slice())).unwrap();
+            node = nodes.choose(&mut self.rng).unwrap();
         }
-        (node.id(), Vec::new(), Self::delta(*node, &[]))
+        delete_ret(node)
     }
 
-    fn splice_node(&mut self, text: &[u8], tree: &Tree) -> (usize, Vec<u8>, isize) {
+    fn splice_node(&mut self, text: &[u8], nodes: &[Node<'_>]) -> (usize, Vec<u8>, isize) {
         let chaotic = self.rng.random_range(0..100) < self.chaos;
 
-        let mut node = tree.root_node();
-        let mut candidates = Vec::new();
         // When modified trees are re-parsed, their nodes may have novel kinds
         // not in Branches (candidates.len() == 0). Also, avoid not mutating
         // (candidates.len() == 1).
-        while candidates.len() <= 1 {
-            node = self.pick_node(tree);
+        let mut node;
+        let mut candidates;
+        loop {
+            node = nodes.choose(&mut self.rng).unwrap();
             candidates = if chaotic {
-                let kind_idx = self.rng.random_range(0..self.kinds.len());
-                let kind = self.kinds.get(kind_idx).unwrap();
-                self.branches.0.get(kind).unwrap().clone()
+                let kind = *self.kinds.choose(&mut self.rng).unwrap();
+                self.branches.0[kind].as_slice()
             } else {
                 self.branches
                     .0
                     .get(node.kind())
-                    .cloned()
+                    .map(Vec::as_slice)
                     .unwrap_or_default()
             };
+            if candidates.len() > 1 {
+                break;
+            }
         }
 
-        let idx = self.rng.random_range(0..candidates.len());
-        let mut candidate = candidates.get(idx).unwrap();
         // Try to avoid not mutating
         let node_text = &text[node.byte_range()];
-        while candidates.len() > 1 && candidate == &node_text {
-            let idx = self.rng.random_range(0..candidates.len());
-            candidate = candidates.get(idx).unwrap();
+        let mut candidate;
+        loop {
+            candidate = *candidates.choose(&mut self.rng).unwrap();
+            if candidate != node_text {
+                break;
+            }
         }
         // eprintln!(
         //     "Replacing '{}' with '{}'",
         //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
         //     std::str::from_utf8(candidate).unwrap(),
         // );
-        let replace = Vec::from(*candidate);
+        let replace = Vec::from(candidate);
         let delta = Self::delta(node, replace.as_slice());
         (node.id(), replace, delta)
     }
 
     pub fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
         // TODO: Assert that text0 and tree.root_node() are the same length?
-        let mut edits = Edits::default();
         if self.inter_splices == 0 {
             return None;
         }
         let splices = self.rng.random_range(1..self.inter_splices);
+        let mut edits = Edits::default();
         let mut text = Vec::from(text0);
         let mut sz = isize::try_from(text.len()).unwrap_or_default();
+        let mut nodes = Self::all_nodes(&tree);
         for i in 0..splices {
             let (id, bytes, delta) = if self.rng.random_range(0..100) < self.deletions {
-                self.delete_node(text.as_slice(), &tree)
+                self.delete_node(&text, &nodes)
             } else {
-                self.splice_node(text.as_slice(), &tree)
+                self.splice_node(&text, &nodes)
             };
-            sz += delta;
-            let sized_out = usize::try_from(sz).unwrap_or_default() >= self.max_size;
             edits.0.insert(id, bytes);
+            sz += delta;
+            let sz_u = usize::try_from(sz).unwrap_or_default();
+            let sized_out = sz_u >= self.max_size;
             if i % self.reparse == 0 || i + 1 == splices || sized_out {
-                let mut result = Vec::with_capacity(usize::try_from(sz).unwrap_or_default());
-                tree_sitter_edit::render(&mut result, &tree, text.as_slice(), &edits).ok()?;
-                text = result.clone();
-                tree = parse(&self.language, &String::from_utf8_lossy(text.as_slice()));
-                edits = Edits::default();
+                let mut result = Vec::with_capacity(sz_u);
+                tree_sitter_edit::render(&mut result, &tree, &text, &edits).ok()?;
+                text = result;
+                tree = parse(&self.language, &text);
+                nodes = Self::all_nodes(&tree);
+                edits.0.clear();
             }
             if sized_out {
                 break;
@@ -297,12 +250,36 @@ impl Iterator for Splicer<'_> {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut tree_idx: usize = self.pick_usize(self.trees.len());
-        let (mut text, mut tree) = *self.trees.get(tree_idx).unwrap();
-        while text.len() > self.max_size {
-            tree_idx = self.pick_usize(self.trees.len());
-            (text, tree) = *self.trees.get(tree_idx).unwrap();
+        let mut text;
+        let mut tree;
+        loop {
+            (text, tree) = *self.trees.choose(&mut self.rng).unwrap();
+            if text.len() <= self.max_size {
+                break;
+            }
         }
         self.splice_tree(text, tree.clone())
+    }
+}
+
+/// Pre-order DFS traversal of `tree`.
+///
+/// Traversal order doesn't really matter in this file.
+fn traverse<'a>(tree: &'a Tree, mut f: impl FnMut(Node<'a>)) {
+    let mut cursor = tree.walk();
+    let mut visited_children = false;
+    loop {
+        if visited_children {
+            if cursor.goto_next_sibling() {
+                visited_children = false;
+            } else if !cursor.goto_parent() {
+                break;
+            }
+        } else {
+            f(cursor.node());
+            if !cursor.goto_first_child() {
+                visited_children = true;
+            }
+        }
     }
 }
