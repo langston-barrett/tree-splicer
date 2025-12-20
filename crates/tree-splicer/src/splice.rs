@@ -2,6 +2,7 @@
 use std::collections::{HashMap, HashSet};
 
 use rand::{prelude::StdRng, seq::IndexedRandom, Rng, SeedableRng};
+use tracing::trace;
 use tree_sitter::{Language, Node, Tree};
 
 use tree_sitter_edit::Editor;
@@ -26,7 +27,7 @@ impl Editor for Edits {
 struct Branches<'a>(HashMap<&'static str, Vec<&'a [u8]>>);
 
 impl<'a> Branches<'a> {
-    fn new(trees: &[(&'a [u8], &'a Tree)]) -> Self {
+    fn new(trees: &[(&'a [u8], &'_ Tree)]) -> Self {
         let mut branches = HashMap::with_capacity(trees.len()); // min
         for &(text, tree) in trees {
             traverse(tree, |node| {
@@ -39,7 +40,7 @@ impl<'a> Branches<'a> {
         Branches(
             branches
                 .into_iter()
-                .map(|(k, s)| (k, s.iter().copied().collect()))
+                .map(|(k, s)| (k, s.into_iter().collect()))
                 .collect(),
         )
     }
@@ -73,7 +74,7 @@ pub struct Config {
     /// By default, deletes optional nodes. Chaotic deletions delete any node.
     pub deletions: u8,
     pub language: Language,
-    // pub intra_splices: usize,
+    pub intra_splices: usize,
     /// Perform anywhere from zero to this many inter-file splices per test.
     pub inter_splices: usize,
     /// Approximate maximum file size to produce (bytes)
@@ -95,7 +96,7 @@ pub struct Splicer<'a> {
     chaos: u8,
     deletions: u8,
     kinds: Vec<&'static str>,
-    // intra_splices: usize,
+    intra_splices: usize,
     inter_splices: usize,
     max_size: usize,
     node_types: NodeTypes,
@@ -135,7 +136,7 @@ impl<'a> Splicer<'a> {
             language: config.language,
             branches,
             kinds,
-            // intra_splices: config.intra_splices,
+            intra_splices: config.intra_splices,
             inter_splices: config.inter_splices,
             max_size: config.max_size,
             node_types: config.node_types,
@@ -151,99 +152,189 @@ impl<'a> Splicer<'a> {
         all
     }
 
-    fn delete_node(&mut self, _text: &[u8], nodes: &[Node<'_>]) -> (usize, Vec<u8>, isize) {
+    fn delete_node(&mut self, _text: &[u8], nodes: &[Node<'_>]) -> Option<(usize, Vec<u8>, isize)> {
         let delete_ret = |node: &Node<'_>| (node.id(), Vec::new(), Self::delta(node, &[]));
 
         let chaotic = self.rng.random_range(0..100) < self.chaos;
 
         let mut node = nodes.choose(&mut self.rng).unwrap();
         if chaotic || nodes.iter().all(|n| !self.node_types.optional_node(n)) {
-            return delete_ret(node);
+            return Some(delete_ret(node));
         }
+        let mut i = 0;
         while !self.node_types.optional_node(node) {
             node = nodes.choose(&mut self.rng).unwrap();
-        }
-        delete_ret(node)
-    }
-
-    fn splice_node(&mut self, text: &[u8], nodes: &[Node<'_>]) -> (usize, Vec<u8>, isize) {
-        let chaotic = self.rng.random_range(0..100) < self.chaos;
-
-        // When modified trees are re-parsed, their nodes may have novel kinds
-        // not in Branches (candidates.len() == 0). Also, avoid not mutating
-        // (candidates.len() == 1).
-        let mut node;
-        let mut candidates;
-        loop {
-            node = nodes.choose(&mut self.rng).unwrap();
-            candidates = if chaotic {
-                let kind = *self.kinds.choose(&mut self.rng).unwrap();
-                self.branches.0[kind].as_slice()
-            } else {
-                self.branches
-                    .0
-                    .get(node.kind())
-                    .map(Vec::as_slice)
-                    .unwrap_or_default()
-            };
-            if candidates.len() > 1 {
-                break;
+            if i > 256 {
+                trace!("Couldn't find any node to delete");
+                return None;
             }
+            i += 1;
         }
-
-        // Try to avoid not mutating
-        let node_text = &text[node.byte_range()];
-        let mut candidate;
-        loop {
-            candidate = *candidates.choose(&mut self.rng).unwrap();
-            if candidate != node_text {
-                break;
-            }
-        }
-        // eprintln!(
-        //     "Replacing '{}' with '{}'",
-        //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
-        //     std::str::from_utf8(candidate).unwrap(),
-        // );
-        let replace = Vec::from(candidate);
-        let delta = Self::delta(node, replace.as_slice());
-        (node.id(), replace, delta)
+        Some(delete_ret(node))
     }
 
     pub fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
+        trace!("Mutating file:\n{}", String::from_utf8_lossy(text0));
         // TODO: Assert that text0 and tree.root_node() are the same length?
-        if self.inter_splices == 0 {
+        let inter_splices = if self.inter_splices <= 1 {
+            self.inter_splices
+        } else {
+            self.rng.random_range(1..self.inter_splices)
+        };
+        let intra_splices = if self.intra_splices <= 1 {
+            self.intra_splices
+        } else {
+            self.rng.random_range(1..self.intra_splices)
+        };
+        let splices = inter_splices.saturating_add(intra_splices);
+        if splices == 0 {
             return None;
         }
-        let splices = self.rng.random_range(1..self.inter_splices);
+
         let mut edits = Edits::default();
         let mut text = Vec::from(text0);
         let mut sz = isize::try_from(text.len()).unwrap_or_default();
         let mut nodes = Self::all_nodes(&tree);
+        let mut intra_branches = if self.intra_splices > 0 {
+            Branches::new(&[(text0, &tree)])
+        } else {
+            Branches::new(&[])
+        };
+
         for i in 0..splices {
-            let (id, bytes, delta) = if self.rng.random_range(0..100) < self.deletions {
+            let result = if self.rng.random_range(0..100) < self.deletions {
+                trace!("Performing deletion");
                 self.delete_node(&text, &nodes)
+            } else if i < self.intra_splices {
+                trace!("Performing intra-file splice");
+                debug_assert!(!intra_branches.0.is_empty());
+                splice(
+                    &mut self.rng,
+                    self.chaos,
+                    &self.kinds,
+                    &intra_branches,
+                    &text,
+                    &nodes,
+                )
             } else {
-                self.splice_node(&text, &nodes)
+                trace!("Performing inter-file splice");
+                splice(
+                    &mut self.rng,
+                    self.chaos,
+                    &self.kinds,
+                    &self.branches,
+                    &text,
+                    &nodes,
+                )
+            };
+            let Some((id, bytes, delta)) = result else {
+                continue;
             };
             edits.0.insert(id, bytes);
             sz += delta;
             let sz_u = usize::try_from(sz).unwrap_or_default();
             let sized_out = sz_u >= self.max_size;
-            if i % self.reparse == 0 || i + 1 == splices || sized_out {
+            if i % self.reparse == 0 || i + 1 == inter_splices || sized_out {
                 let mut result = Vec::with_capacity(sz_u);
                 tree_sitter_edit::render(&mut result, &tree, &text, &edits).ok()?;
                 text = result;
                 tree = parse(&self.language, &text);
                 nodes = Self::all_nodes(&tree);
+                intra_branches = if i <= self.intra_splices {
+                    Branches::new(&[(text.as_slice(), &tree)])
+                } else {
+                    Branches::new(&[])
+                };
                 edits.0.clear();
             }
             if sized_out {
+                trace!("Test case exceeds max size ({} >= {})", sz_u, self.max_size);
                 break;
             }
         }
+
         Some(text)
     }
+}
+
+fn splice(
+    mut rng: &mut StdRng,
+    chaos: u8,
+    kinds: &[&'static str],
+    branches: &Branches<'_>,
+    text: &[u8],
+    nodes: &[Node<'_>],
+) -> Option<(usize, Vec<u8>, isize)> {
+    let chaotic = rng.random_range(0..100) < chaos;
+    trace!("Chaotic? {chaotic}");
+
+    // When modified trees are re-parsed, their nodes may have novel kinds
+    // not in Branches (candidates.len() == 0). Also, avoid not mutating
+    // (candidates.len() == 1).
+    let mut node;
+    let mut candidates;
+    let mut i = 0;
+    loop {
+        node = nodes.choose(&mut rng).unwrap();
+        trace!("Chose node of kind {}", node.kind());
+        candidates = if chaotic {
+            let kind = *kinds.choose(&mut rng).unwrap();
+            branches.0[kind].as_slice()
+        } else {
+            branches
+                .0
+                .get(node.kind())
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+        };
+        if candidates.len() > 1 {
+            break;
+        }
+        trace!("No mutation candidates for {}", node.kind());
+
+        // Don't keep going forever. This can happen when performing an
+        // intra-file splice on a small input program.
+        if i > 256 {
+            trace!("Couldn't find any node to mutate");
+            return None;
+        }
+        i += 1;
+    }
+
+    trace!(
+        "Replacing {}:\n{}",
+        node.kind(),
+        String::from_utf8_lossy(&text[node.byte_range()])
+    );
+
+    // Try to avoid not mutating
+    let node_text = &text[node.byte_range()];
+    let mut candidate;
+    let mut i = 0;
+    loop {
+        debug_assert!(!candidates.is_empty());
+        candidate = *candidates.choose(rng).unwrap();
+        if candidate != node_text {
+            break;
+        }
+
+        // don't keep going forever
+        if i > 256 {
+            break;
+        }
+        i += 1;
+    }
+
+    trace!("Replacing with:\n{}", String::from_utf8_lossy(candidate));
+
+    // eprintln!(
+    //     "Replacing '{}' with '{}'",
+    //     std::str::from_utf8(&text[node.byte_range()]).unwrap(),
+    //     std::str::from_utf8(candidate).unwrap(),
+    // );
+    let replace = Vec::from(candidate);
+    let delta = Splicer::delta(node, replace.as_slice());
+    Some((node.id(), replace, delta))
 }
 
 impl Iterator for Splicer<'_> {
