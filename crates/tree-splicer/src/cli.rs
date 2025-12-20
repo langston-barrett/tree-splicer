@@ -68,9 +68,13 @@ pub struct Args {
     #[arg(short, long, default_value_t = 5)]
     pub deletions: u8,
 
-    /// Behavior on parse errors
-    #[arg(long, default_value_t = OnParseError::Warn, value_name = "CHOICE")]
-    on_parse_error: OnParseError,
+    /// Number of intra-file splices per test
+    #[arg(short, long, default_value_t = 8)]
+    pub intra_file_splices: usize,
+
+    /// Number of inter-file splices per test
+    #[arg(short, long, default_value_t = 4)]
+    pub inter_file_splices: usize,
 
     /// Number of threads
     #[arg(short, long, default_value_t = num_cpus::get())]
@@ -80,9 +84,9 @@ pub struct Args {
     #[arg(long, default_value_t = 1048576)]
     pub max_size: usize,
 
-    /// Number of mutations per teset
-    #[arg(short, long, default_value_t = 16)]
-    pub mutations: usize,
+    /// Behavior on parse errors
+    #[arg(long, default_value_t = OnParseError::Warn, value_name = "CHOICE")]
+    on_parse_error: OnParseError,
 
     /// Directory to output to
     #[arg(short, long, default_value_os = "tree-splicer.out")]
@@ -176,8 +180,8 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         chaos: args.chaos,
         deletions: args.deletions,
         language,
-        // intra_splices: 10,
-        inter_splices: args.mutations,
+        intra_splices: args.intra_file_splices,
+        inter_splices: args.inter_file_splices,
         max_size: args.max_size,
         node_types,
         reparse: args.reparse,

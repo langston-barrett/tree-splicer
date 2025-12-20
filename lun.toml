@@ -25,7 +25,7 @@ name = "zizmor"
 cmd = "zizmor --"
 files = [".github/**/*.yml"]
 # fix = "zizmor --fix=safe --"
-ignore = [".github/workflows/dependabot.yml"] # zizmor#1341
+ignore = [".github/**/dependabot.yml"] # zizmor#1341
 
 # -------------------------------------
 # json

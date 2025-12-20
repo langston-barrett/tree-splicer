@@ -602,6 +602,7 @@ dependencies = [
  "tracing-subscriber",
  "tree-sitter",
  "tree-sitter-edit",
+ "tree-sitter-rust",
 ]
 
 [[package]]
