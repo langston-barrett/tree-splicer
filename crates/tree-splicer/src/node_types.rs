@@ -158,4 +158,10 @@ impl NodeTypes {
     pub fn subtypes(&self, kind: &String) -> &[String] {
         self.subtypes.get(kind).expect("Invalid node kind")
     }
+
+    /// Returns subtypes for a kind, or None if the kind doesn't exist
+    #[must_use]
+    pub fn get_subtypes(&self, kind: &str) -> Option<&[String]> {
+        self.subtypes.get(kind).map(|v| v.as_slice())
+    }
 }

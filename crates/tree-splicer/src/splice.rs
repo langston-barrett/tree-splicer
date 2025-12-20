@@ -27,7 +27,7 @@ impl Editor for Edits {
 struct Branches<'a>(HashMap<&'static str, Vec<&'a [u8]>>);
 
 impl<'a> Branches<'a> {
-    fn new(trees: &[(&'a [u8], &'_ Tree)]) -> Self {
+    fn new(trees: &[(&'a [u8], &'_ Tree)], node_types: &NodeTypes) -> Self {
         let mut branches = HashMap::with_capacity(trees.len()); // min
         for &(text, tree) in trees {
             traverse(tree, |node| {
@@ -37,12 +37,51 @@ impl<'a> Branches<'a> {
                     .insert(&text[node.byte_range()]);
             });
         }
-        Branches(
-            branches
-                .into_iter()
-                .map(|(k, s)| (k, s.into_iter().collect()))
-                .collect(),
-        )
+        let mut result: HashMap<&'static str, Vec<&'a [u8]>> = branches
+            .into_iter()
+            .map(|(k, s)| (k, s.into_iter().collect()))
+            .collect();
+
+        let kinds = result.keys().copied().collect::<Vec<_>>();
+        let mut queue = Vec::<&str>::new();
+        let mut visited = HashSet::<&str>::new();
+        for kind in kinds {
+            queue.clear();
+            visited.clear();
+            queue.push(kind);
+            let mut entries_to_add = Vec::<&[u8]>::new();
+
+            while let Some(current_kind) = queue.pop() {
+                let novel = visited.insert(current_kind);
+                if !novel {
+                    continue;
+                }
+                entries_to_add.clear();
+
+                let Some(descendants) = node_types.get_subtypes(current_kind) else {
+                    continue;
+                };
+
+                for descendant in descendants {
+                    if !visited.contains(descendant.as_str()) {
+                        queue.push(descendant);
+                    }
+
+                    if descendant.as_str() == kind {
+                        continue;
+                    }
+                    if let Some(descendant_entries) = result.get(descendant.as_str()) {
+                        entries_to_add.extend(descendant_entries.iter().copied());
+                    }
+                    result
+                        .entry(kind)
+                        .or_default()
+                        .extend(entries_to_add.iter());
+                }
+            }
+        }
+
+        Branches(result)
     }
 
     fn possible(&self) -> usize {
@@ -127,7 +166,7 @@ impl<'a> Splicer<'a> {
             return None;
         }
 
-        let branches = Branches::new(&trees);
+        let branches = Branches::new(&trees, &config.node_types);
         let rng = StdRng::seed_from_u64(config.seed);
         let kinds = branches.0.keys().copied().collect();
         Some(Splicer {
@@ -196,9 +235,9 @@ impl<'a> Splicer<'a> {
         let mut sz = isize::try_from(text.len()).unwrap_or_default();
         let mut nodes = Self::all_nodes(&tree);
         let mut intra_branches = if self.intra_splices > 0 {
-            Branches::new(&[(text0, &tree)])
+            Branches::new(&[(text0, &tree)], &self.node_types)
         } else {
-            Branches::new(&[])
+            Branches::new(&[], &self.node_types)
         };
 
         for i in 0..splices {
@@ -240,10 +279,10 @@ impl<'a> Splicer<'a> {
                 text = result;
                 tree = parse(&self.language, &text);
                 nodes = Self::all_nodes(&tree);
-                intra_branches = if i <= self.intra_splices {
-                    Branches::new(&[(text.as_slice(), &tree)])
+                intra_branches = if i < self.intra_splices {
+                    Branches::new(&[(text.as_slice(), &tree)], &self.node_types)
                 } else {
-                    Branches::new(&[])
+                    Branches::new(&[], &self.node_types)
                 };
                 edits.0.clear();
             }
@@ -372,5 +411,127 @@ fn traverse<'a>(tree: &'a Tree, mut f: impl FnMut(Node<'a>)) {
                 visited_children = true;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Config, Splicer};
+    use std::collections::{HashMap, HashSet};
+    use tree_sitter::Parser;
+
+    fn go(splices: usize, original_program: &str, expected_mutants: &[&str]) {
+        let language = tree_sitter_rust::LANGUAGE.into();
+        let mut parser = Parser::new();
+        parser
+            .set_language(&language)
+            .expect("Failed to set tree-sitter parser language");
+
+        let tree = parser
+            .parse(original_program.as_bytes(), None)
+            .expect("Failed to parse code");
+        assert!(!tree.root_node().has_error());
+
+        let mut files = HashMap::new();
+        files.insert(
+            "test.rs".to_string(),
+            (original_program.as_bytes().to_vec(), tree),
+        );
+
+        let node_types = crate::node_types::NodeTypes::new(tree_sitter_rust::NODE_TYPES)
+            .expect("Failed to parse node types");
+        let config = Config {
+            chaos: 0,
+            deletions: 0,
+            language,
+            intra_splices: 0,
+            inter_splices: splices,
+            max_size: 1024,
+            node_types,
+            reparse: 1,
+            seed: 0,
+        };
+
+        let splicer = Splicer::new(config, &files).expect("Failed to create splicer");
+
+        let expected = expected_mutants
+            .iter()
+            .map(|m| m.trim())
+            .collect::<HashSet<_>>();
+        let mut found_mutants: HashSet<String> = HashSet::new();
+        for mutant in splicer.take(256) {
+            let mutant_str = String::from_utf8_lossy(&mutant).trim().to_string();
+            eprintln!("{mutant_str}");
+            if expected.contains(&mutant_str.as_str()) {
+                found_mutants.insert(mutant_str);
+            }
+        }
+
+        for expected_mutant in expected {
+            assert!(
+                found_mutants.contains(expected_mutant),
+                "Expected mutant not found in first 256 mutants:\n{expected_mutant}",
+            );
+        }
+    }
+
+    #[test]
+    fn readme() {
+        go(
+            1,
+            "
+fn even(x: usize) -> bool {
+    if x % 2 == 0 {
+        return true;
+    } else {
+        return false;
+    }
+}
+",
+            &[
+                "
+fn even(x: usize) -> usize {
+    if x % 2 == 0 {
+        return true;
+    } else {
+        return false;
+    }
+}
+",
+                "
+fn even(x: bool) -> bool {
+    if x % 2 == 0 {
+        return true;
+    } else {
+        return false;
+    }
+}
+",
+                "
+fn even(x: usize) -> bool {
+    if x % 0 == 0 {
+        return true;
+    } else {
+        return false;
+    }
+}
+",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_binary_expression_operand_swap() {
+        go(
+            2,
+            "let x = 1 + 2;",
+            &[
+                "let x = 1 + 1;",
+                "let x = 2 + 2;",
+                //
+                // "let x = 2 + 1;"  // TODO: ?
+                // "let x = 1;", // TODO: ?
+            ],
+        );
     }
 }
