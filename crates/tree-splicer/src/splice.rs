@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 
-use rand::{prelude::StdRng, seq::IndexedRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, prelude::StdRng, seq::IndexedRandom};
 use tracing::trace;
 use tree_sitter::{Language, Node, Tree};
 
 use tree_sitter_edit::Editor;
 
-use crate::node_types::NodeTypes;
+use crate::node_types::{NodeTypes, Subtype};
 
 #[derive(Debug, Default)]
 struct Edits(HashMap<usize, Vec<u8>>);
@@ -42,7 +42,9 @@ impl<'a> Branches<'a> {
             .map(|(k, s)| (k, s.into_iter().collect()))
             .collect();
 
-        let kinds = result.keys().copied().collect::<Vec<_>>();
+        let mut kinds = result.keys().copied().collect::<HashSet<_>>();
+        kinds.extend(node_types.children.keys());
+        kinds.extend(node_types.fields.keys());
         let mut queue = Vec::<&str>::new();
         let mut visited = HashSet::<&str>::new();
         for kind in kinds {
@@ -254,6 +256,7 @@ impl<'a> Splicer<'a> {
                     &intra_branches,
                     &text,
                     &nodes,
+                    &self.node_types,
                 )
             } else {
                 trace!("Performing inter-file splice");
@@ -264,6 +267,7 @@ impl<'a> Splicer<'a> {
                     &self.branches,
                     &text,
                     &nodes,
+                    &self.node_types,
                 )
             };
             let Some((id, bytes, delta)) = result else {
@@ -296,6 +300,59 @@ impl<'a> Splicer<'a> {
     }
 }
 
+fn parsed_as<'a>(node: &Node<'_>, node_types: &'a NodeTypes) -> Option<&'a [Subtype]> {
+    if !node.is_named() {
+        return None;
+    }
+    let parent = node.parent()?;
+    let kind = parent.kind();
+    let fields = node_types.fields.get(kind)?;
+    let mut cursor = parent.walk();
+    for (idx, child) in parent.children(&mut cursor).enumerate() {
+        if child.id() == node.id() {
+            if let Some(name) = parent.field_name_for_child(idx.try_into().unwrap())
+                && let Some(field) = fields.get(name)
+            {
+                return Some(field.types.as_slice());
+            }
+            break;
+        }
+    }
+    node_types
+        .children
+        .get(kind)
+        .map(|children| children.types.as_slice())
+}
+
+fn splice_candidates<'a>(
+    rng: &mut StdRng,
+    kinds: &[&'static str],
+    branches: &'a Branches<'_>,
+    node_types: &NodeTypes,
+    chaotic: bool,
+    node: &Node<'_>,
+) -> &'a [&'a [u8]] {
+    trace!("Chose node of kind {}", node.kind());
+    let kind = if chaotic {
+        let kind = *kinds.choose(rng).unwrap();
+        trace!("Chose chaotic kind {kind}");
+        kind
+    } else if let Some(kinds) = parsed_as(node, node_types)
+        && !kinds.is_empty()
+    {
+        let kind = kinds.choose(rng).unwrap().ty.as_str();
+        trace!("Chose parsed-as kind {kind}");
+        kind
+    } else {
+        node.kind()
+    };
+    if chaotic {
+        branches.0[kind].as_slice()
+    } else {
+        branches.0.get(kind).map(Vec::as_slice).unwrap_or_default()
+    }
+}
+
 fn splice(
     mut rng: &mut StdRng,
     chaos: u8,
@@ -303,6 +360,7 @@ fn splice(
     branches: &Branches<'_>,
     text: &[u8],
     nodes: &[Node<'_>],
+    node_types: &'_ NodeTypes,
 ) -> Option<(usize, Vec<u8>, isize)> {
     let chaotic = rng.random_range(0..100) < chaos;
     trace!("Chaotic? {chaotic}");
@@ -315,17 +373,7 @@ fn splice(
     let mut i = 0;
     loop {
         node = nodes.choose(&mut rng).unwrap();
-        trace!("Chose node of kind {}", node.kind());
-        candidates = if chaotic {
-            let kind = *kinds.choose(&mut rng).unwrap();
-            branches.0[kind].as_slice()
-        } else {
-            branches
-                .0
-                .get(node.kind())
-                .map(Vec::as_slice)
-                .unwrap_or_default()
-        };
+        candidates = splice_candidates(rng, kinds, branches, node_types, chaotic, node);
         if candidates.len() > 1 {
             break;
         }
@@ -416,9 +464,10 @@ fn traverse<'a>(tree: &'a Tree, mut f: impl FnMut(Node<'a>)) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, Splicer};
+    use super::{Config, Splicer, parsed_as, traverse};
+    use crate::node_types::NodeTypes;
     use std::collections::{HashMap, HashSet};
-    use tree_sitter::Parser;
+    use tree_sitter::{Node, Parser, Tree};
 
     fn go(splices: usize, original_program: &str, expected_mutants: &[&str]) {
         let language = tree_sitter_rust::LANGUAGE.into();
@@ -438,8 +487,8 @@ mod tests {
             (original_program.as_bytes().to_vec(), tree),
         );
 
-        let node_types = crate::node_types::NodeTypes::new(tree_sitter_rust::NODE_TYPES)
-            .expect("Failed to parse node types");
+        let node_types =
+            NodeTypes::new(tree_sitter_rust::NODE_TYPES).expect("Failed to parse node types");
         let config = Config {
             chaos: 0,
             deletions: 0,
@@ -461,6 +510,10 @@ mod tests {
         let mut found_mutants: HashSet<String> = HashSet::new();
         for mutant in splicer.take(256) {
             let mutant_str = String::from_utf8_lossy(&mutant).trim().to_string();
+
+            let tree = parser.parse(mutant.as_slice(), None).unwrap();
+            assert!(!tree.root_node().has_error());
+
             eprintln!("{mutant_str}");
             if expected.contains(&mutant_str.as_str()) {
                 found_mutants.insert(mutant_str);
@@ -526,11 +579,77 @@ fn even(x: usize) -> bool {
             2,
             "let x = 1 + 2;",
             &[
+                "let x = 1;",
+                "let x = 2;",
                 "let x = 1 + 1;",
                 "let x = 2 + 2;",
                 //
                 // "let x = 2 + 1;"  // TODO: ?
-                // "let x = 1;", // TODO: ?
+            ],
+        );
+    }
+
+    fn find_node_by_text<'a>(tree: &'a Tree, text: &[u8], source: &[u8]) -> Option<Node<'a>> {
+        let mut candidates = Vec::new();
+        traverse(tree, |node| {
+            let node_text = &source[node.byte_range()];
+            if node_text == text && node.is_named() {
+                candidates.push(node);
+            }
+        });
+        candidates.first().copied()
+    }
+
+    fn test_parse_as(
+        program: &str,
+        node_text: &str,
+        expected_kind: &str,
+        expected_parsed_as: &[&str],
+    ) {
+        let language = tree_sitter_rust::LANGUAGE.into();
+        let mut parser = Parser::new();
+        parser.set_language(&language).unwrap();
+        let tree = parser.parse(program.as_bytes(), None).unwrap();
+        let node_types = NodeTypes::new(tree_sitter_rust::NODE_TYPES).unwrap();
+        let source = program.as_bytes();
+        let node = find_node_by_text(&tree, node_text.as_bytes(), source).unwrap();
+        assert_eq!(node.kind(), expected_kind, "Kind mismatch for {node_text}");
+        let parsed_as_result = parsed_as(&node, &node_types);
+        let parsed_as_kinds: Vec<&str> = parsed_as_result
+            .map(|subtypes| subtypes.iter().map(|s| s.ty.as_str()).collect())
+            .unwrap_or_default();
+        assert_eq!(
+            expected_parsed_as, parsed_as_kinds,
+            "parsed_as mismatch for {node_text}",
+        );
+    }
+
+    #[test]
+    fn parse_as_int() {
+        test_parse_as(
+            "x.1",
+            "1",
+            "integer_literal",
+            &["field_identifier", "integer_literal"],
+        );
+    }
+
+    #[test]
+    fn parse_as_expression() {
+        test_parse_as("fn f() { let x = y; }", "y", "identifier", &["_expression"]);
+    }
+
+    #[test]
+    fn parse_as_let() {
+        test_parse_as(
+            "fn f() { let x = 0; }",
+            "let x = 0;",
+            "let_declaration",
+            &[
+                "_declaration_statement",
+                "_expression",
+                "expression_statement",
+                "label",
             ],
         );
     }

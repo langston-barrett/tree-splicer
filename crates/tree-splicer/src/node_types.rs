@@ -23,23 +23,23 @@ struct Node {
 }
 
 #[derive(Default, Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
-struct Children {
+pub(crate) struct Children {
     multiple: bool,
     required: bool,
-    types: Vec<Subtype>,
+    pub(crate) types: Vec<Subtype>,
 }
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
-struct Field {
+pub(crate) struct Field {
     multiple: bool,
     required: bool,
-    types: Vec<Subtype>,
+    pub(crate) types: Vec<Subtype>,
 }
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
-struct Subtype {
+pub(crate) struct Subtype {
     #[serde(rename(deserialize = "type", serialize = "type"))]
-    ty: String,
+    pub(crate) ty: String,
     named: bool,
 }
 
@@ -52,8 +52,9 @@ pub struct FieldInfo {
 
 #[derive(Clone, Debug)]
 pub struct NodeTypes {
-    children: HashMap<String, Children>,
-    subtypes: HashMap<String, Vec<String>>,
+    pub(crate) children: HashMap<&'static str, Children>,
+    subtypes: HashMap<&'static str, Vec<String>>,
+    pub(crate) fields: HashMap<&'static str, HashMap<String, Field>>,
     reverse_fields: HashMap<String, Vec<FieldInfo>>,
 }
 
@@ -71,11 +72,24 @@ fn subtypes(name: &str, nodes: &Vec<Node>) -> Vec<String> {
 }
 
 impl NodeTypes {
-    pub fn new(node_types_json_str: &str) -> Result<Self, serde_json::Error> {
+    pub fn new(node_types_json_str: &'static str) -> Result<Self, serde_json::Error> {
+        let find = |s: &str| {
+            let idx = node_types_json_str.find(s).unwrap();
+            &node_types_json_str[idx..idx + s.len()]
+        };
         let nodes: Vec<Node> = serde_json::from_str(node_types_json_str)?;
+        let children = nodes
+            .iter()
+            .filter(|n| n.named)
+            .map(|n| (find(&n.ty), n.children.clone()))
+            .collect();
         let subtypes: HashMap<_, _> = nodes
             .iter()
-            .map(|n| (n.ty.clone(), subtypes(&n.ty, &nodes)))
+            .map(|n| (find(&n.ty), subtypes(&n.ty, &nodes)))
+            .collect();
+        let fields = nodes
+            .iter()
+            .map(|n| (find(&n.ty), n.fields.clone()))
             .collect();
         let mut reverse_fields = HashMap::new();
 
@@ -85,7 +99,7 @@ impl NodeTypes {
             for field in node.fields.values() {
                 // And save the name of all types that the field could be.
                 for subtype in &field.types {
-                    for subsubty in subtypes.get(&subtype.ty).unwrap_or(&Vec::new()) {
+                    for subsubty in subtypes.get(subtype.ty.as_str()).unwrap_or(&Vec::new()) {
                         let entry = reverse_fields.entry(subsubty.clone());
                         entry
                             .and_modify(|v: &mut Vec<FieldInfo>| {
@@ -107,11 +121,9 @@ impl NodeTypes {
             }
         }
         Ok(NodeTypes {
-            children: nodes
-                .iter()
-                .map(|n| (n.ty.clone(), n.children.clone()))
-                .collect(),
+            children,
             subtypes,
+            fields,
             reverse_fields,
         })
     }
@@ -142,11 +154,12 @@ impl NodeTypes {
     #[must_use]
     pub fn list_types(&self, node: &tree_sitter::Node<'_>) -> Vec<String> {
         let mut kinds = Vec::new();
-        if let Some(children) = self.children.get(node.kind()) {
-            if children.multiple && !children.required {
-                for child in &children.types {
-                    kinds.push(child.ty.clone());
-                }
+        if let Some(children) = self.children.get(node.kind())
+            && children.multiple
+            && !children.required
+        {
+            for child in &children.types {
+                kinds.push(child.ty.clone());
             }
         }
         kinds
@@ -155,7 +168,7 @@ impl NodeTypes {
     /// # Panics
     /// When kind can't be found
     #[must_use]
-    pub fn subtypes(&self, kind: &String) -> &[String] {
+    pub fn subtypes(&self, kind: &str) -> &[String] {
         self.subtypes.get(kind).expect("Invalid node kind")
     }
 

@@ -1,8 +1,8 @@
 use std::fmt;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::fmt::{
-    format::{self, FormatEvent, FormatFields},
     FmtContext,
+    format::{self, FormatEvent, FormatFields},
 };
 
 use nu_ansi_term::{Color, Style};
