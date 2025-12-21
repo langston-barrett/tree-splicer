@@ -346,11 +346,7 @@ fn splice_candidates<'a>(
     } else {
         node.kind()
     };
-    if chaotic {
-        branches.0[kind].as_slice()
-    } else {
-        branches.0.get(kind).map(Vec::as_slice).unwrap_or_default()
-    }
+    branches.0.get(kind).map(Vec::as_slice).unwrap_or_default()
 }
 
 fn splice(
