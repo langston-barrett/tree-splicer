@@ -506,6 +506,7 @@ mod tests {
         let mut found_mutants: HashSet<String> = HashSet::new();
         for mutant in splicer.take(256) {
             let mutant_str = String::from_utf8_lossy(&mutant).trim().to_string();
+            eprintln!("{mutant_str}");
 
             let tree = parser.parse(mutant.as_slice(), None).unwrap();
             assert!(!tree.root_node().has_error());
@@ -581,6 +582,20 @@ fn even(x: usize) -> bool {
                 "let x = 2 + 2;",
                 //
                 // "let x = 2 + 1;"  // TODO: ?
+            ],
+        );
+    }
+
+    #[test]
+    fn top_level_decls() {
+        go(
+            2,
+            "const FIVE: usize = 5;\nfn f() {}",
+            &[
+                "fn f() {}\nfn f() {}",
+                "const FIVE: usize = 5;\nconst FIVE: usize = 5;",
+                "const f: usize = 5;\nfn f() {}",
+                "const FIVE: usize = {};\nfn f() {}",
             ],
         );
     }
