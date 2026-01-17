@@ -42,3 +42,7 @@ cli = [
   "dep:num_cpus",
   "dep:tracing-subscriber",
 ]
+
+
+[patch.crates-io]
+tree-sitter-openscad-ng = { git = "https://github.com/fenollp/tree-sitter-openscad.git", branch = "bump_tree-sitter" } # TODO: https://github.com/openscad/tree-sitter-openscad/pull/7
