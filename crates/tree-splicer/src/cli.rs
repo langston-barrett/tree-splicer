@@ -73,7 +73,7 @@ pub struct Args {
     pub intra_file_splices: usize,
 
     /// Number of inter-file splices per test
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(long, default_value_t = 4)]
     pub inter_file_splices: usize,
 
     /// Number of threads
