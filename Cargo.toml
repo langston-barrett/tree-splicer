@@ -2,6 +2,7 @@
 members = [
   "crates/tree-splicer",
   "crates/tree-splicer-javascript",
+  "crates/tree-splicer-openscad",
   "crates/tree-splicer-rust",
   "crates/tree-splicer-typescript",
 ]

@@ -566,6 +566,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4013970217383f67b18aef68f6fb2e8d409bc5755227092d32efb0422ba24b8"
 
 [[package]]
+name = "tree-sitter-openscad-ng"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa00e191bb0053fe78d58edce19a3475da399d3c25caf89c56c8b72b894b236f"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-rust"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -611,6 +621,15 @@ version = "0.7.0"
 dependencies = [
  "anyhow",
  "tree-sitter-javascript",
+ "tree-splicer",
+]
+
+[[package]]
+name = "tree-splicer-openscad"
+version = "0.7.0"
+dependencies = [
+ "anyhow",
+ "tree-sitter-openscad-ng",
  "tree-splicer",
 ]
 
