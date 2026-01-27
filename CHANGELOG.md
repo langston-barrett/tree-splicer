@@ -2,6 +2,14 @@
 
 <!-- https://keepachangelog.com/en/1.0.0/ -->
 
+## next
+
+### Added
+
+- New languages:
+
+  - OpenSCAD
+
 ## [0.7.0] - 2025-11-26
 
 - Bump dependencies, including `tree-sitter`

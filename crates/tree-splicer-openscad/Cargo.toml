@@ -1,0 +1,21 @@
+[package]
+name = "tree-splicer-openscad"
+description = "Simple grammar-based OpenSCAD program generator"
+version = "0.7.1"
+keywords = ["black-box", "fuzzer", "grammar-based", "openscad"]
+edition = "2021"
+authors = ["Pierre Fenoll <pierre.fenoll@gmail.com>"]
+license = "MIT"
+readme = "../../README.md"
+homepage = "https://github.com/langston-barrett/tree-splicer"
+repository = "https://github.com/langston-barrett/tree-splicer"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1"
+tree-splicer = { version = "0.7.0", path = "../tree-splicer", features = [
+  "cli",
+] }
+tree-sitter-openscad-ng = "0.7"

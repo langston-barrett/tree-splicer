@@ -89,6 +89,7 @@ Languages are easy to add, see
 example.
 
 - JavaScript
+- OpenSCAD
 - Rust
 - TypeScript
 
