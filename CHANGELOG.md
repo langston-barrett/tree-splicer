@@ -2,7 +2,7 @@
 
 <!-- https://keepachangelog.com/en/1.0.0/ -->
 
-## [0.8.0] - 2025-01-17
+## next
 
 ### Added
 
