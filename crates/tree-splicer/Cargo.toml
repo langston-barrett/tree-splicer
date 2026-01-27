@@ -25,7 +25,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
-tree-sitter = "0.25"
+tree-sitter = "0.26"
 tree-sitter-edit = "0.4"
 
 [dev-dependencies]
@@ -42,7 +42,3 @@ cli = [
   "dep:num_cpus",
   "dep:tracing-subscriber",
 ]
-
-
-# [patch.crates-io]
-# tree-sitter-openscad-ng = { git = "https://github.com/fenollp/tree-sitter-openscad.git", branch = "bump_tree-sitter" } # TODO: https://github.com/openscad/tree-sitter-openscad/pull/7
