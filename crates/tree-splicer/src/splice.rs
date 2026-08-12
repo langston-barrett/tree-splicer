@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 
-use rand::{Rng, SeedableRng, prelude::StdRng, seq::IndexedRandom};
+use rand::{RngExt, SeedableRng, prelude::StdRng, seq::IndexedRandom};
 use tracing::trace;
 use tree_sitter::{Language, Node, Tree};
 
